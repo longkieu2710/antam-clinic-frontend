@@ -1,0 +1,14 @@
+# node_modules của máy (macOS) không dùng được trong Linux — image tự chạy npm ci
+node_modules
+dist
+.git
+.claude
+.idea
+.vscode
+.DS_Store
+*.log
+Dockerfile
+.dockerignore
+# Tài liệu không cần cho build — sửa tài liệu không làm build lại image
+README.md
+CLAUDE.md
