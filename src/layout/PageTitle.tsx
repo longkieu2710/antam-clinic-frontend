@@ -12,13 +12,13 @@ interface Props {
 
 /** Tiêu đề trang + nhãn trạm CSDL mà trang đang làm việc. */
 export function PageTitle({ title, hub, description, extra }: Props) {
-  const { site, branch } = useSite()
+  const { mode, site, branch } = useSite()
   return (
     <div className="page-head">
       <div>
         <BaseTitle>
           {title}{' '}
-          {hub ? (
+          {hub || mode === 'HQ' ? (
             <BaseTag color="orange">Trung tâm · S0</BaseTag>
           ) : (
             <BaseTag color="green">

@@ -39,7 +39,7 @@ const DON_VI = ['Viên', 'Gói', 'Chai', 'Ống', 'Tuýp', 'Hộp', 'ml']
  * Ô "Bản sao tại chi nhánh" đọc /api/thuoc với X-Site để thấy đồng bộ đã chạy.
  */
 export function ThuocPage() {
-  const { site, branch } = useSite()
+  const { mode, site, branch } = useSite()
   const queryClient = useQueryClient()
   const form = useBaseForm<ThuocRequest>()
   const [q, setQ] = useState('')
@@ -47,7 +47,8 @@ export function ThuocPage() {
   const [open, setOpen] = useState(false)
 
   const listQuery = useQuery({ queryKey: ['thuoc-master', q], queryFn: () => getThuocMaster(q) })
-  const replicaQuery = useQuery({ queryKey: ['thuoc-replica', site], queryFn: () => getThuocReplica(site) })
+  // Bản Trung tâm không đọc dữ liệu chi nhánh → không so với bản sao
+  const replicaQuery = useQuery({ queryKey: ['thuoc-replica', site], queryFn: () => getThuocReplica(site), enabled: mode !== 'HQ' })
 
   /** Bản sao ở chi nhánh được làm mới sau 1,5 giây (chờ Logical Replication). */
   const refreshReplicaLater = () =>
@@ -147,23 +148,25 @@ export function ThuocPage() {
         }
       />
 
-      <BaseAlert
-        type={replicaQuery.error ? 'warning' : inSync ? 'success' : 'info'}
-        title={`Bản sao tại ${branch?.tenCn ?? site} (${site})`}
-        description={
-          replicaQuery.error
-            ? errorText(replicaQuery.error)
-            : q !== ''
-              ? `${site} có ${replicaCount ?? '…'} thuốc (bỏ ô tìm kiếm để so với S0)`
-              : `S0 có ${masterCount ?? '…'} thuốc · ${site} có ${replicaCount ?? '…'} thuốc` +
-                (inSync ? ' — đã đồng bộ' : replicaCount != null && masterCount != null ? ' — đang lệch, replication có thể trễ vài giây' : '')
-        }
-        action={
-          <BaseButton size="small" icon={<SyncIcon />} loading={replicaQuery.isFetching} onClick={() => replicaQuery.refetch()}>
-            Kiểm tra lại
-          </BaseButton>
-        }
-      />
+      {mode !== 'HQ' && (
+        <BaseAlert
+          type={replicaQuery.error ? 'warning' : inSync ? 'success' : 'info'}
+          title={`Bản sao tại ${branch?.tenCn ?? site} (${site})`}
+          description={
+            replicaQuery.error
+              ? errorText(replicaQuery.error)
+              : q !== ''
+                ? `${site} có ${replicaCount ?? '…'} thuốc (bỏ ô tìm kiếm để so với S0)`
+                : `S0 có ${masterCount ?? '…'} thuốc · ${site} có ${replicaCount ?? '…'} thuốc` +
+                  (inSync ? ' — đã đồng bộ' : replicaCount != null && masterCount != null ? ' — đang lệch, replication có thể trễ vài giây' : '')
+          }
+          action={
+            <BaseButton size="small" icon={<SyncIcon />} loading={replicaQuery.isFetching} onClick={() => replicaQuery.refetch()}>
+              Kiểm tra lại
+            </BaseButton>
+          }
+        />
+      )}
 
       <div className="toolbar">
         <BaseSearchInput placeholder="Tìm mã, tên, hoạt chất…" onSearch={setQ} />

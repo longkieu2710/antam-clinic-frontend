@@ -22,6 +22,7 @@ import {
   WalletIcon,
 } from '../components/common'
 import type { ReactNode } from 'react'
+import type { AppMode } from '../api/types'
 
 export interface MenuEntry {
   path: string
@@ -31,6 +32,10 @@ export interface MenuEntry {
   hub?: boolean
   /** Đã có màn hình thật; false = trang "đang phát triển" */
   done?: boolean
+  /** Có trong bản chi nhánh (APP_MODE=branch). Mặc định có */
+  branchApp?: boolean
+  /** Có trong bản Trung tâm (APP_MODE=hq). Mặc định = hub */
+  hqApp?: boolean
 }
 
 export interface MenuGroup {
@@ -44,7 +49,7 @@ export const MENU: MenuGroup[] = [
   {
     label: 'Tổng quan',
     items: [
-      { path: '/', label: 'Tổng quan hệ thống', icon: <DashboardIcon />, done: true },
+      { path: '/', label: 'Tổng quan hệ thống', icon: <DashboardIcon />, done: true, hqApp: true },
       { path: '/tong-quan', label: 'Tổng quan chi nhánh', icon: <HomeIcon />, done: true },
     ],
   },
@@ -83,11 +88,11 @@ export const MENU: MenuGroup[] = [
       { path: '/thuoc', label: 'Thuốc', icon: <ExperimentIcon />, hub: true, done: true },
       { path: '/benh', label: 'Bệnh (ICD-10)', icon: <HeartIcon />, hub: true, done: true },
       { path: '/dich-vu', label: 'Dịch vụ y tế', icon: <SolutionIcon />, hub: true, done: true },
-      { path: '/luong-co-so', label: 'Lương cơ sở', icon: <AccountBookIcon />, hub: true, done: true },
-      { path: '/chi-nhanh', label: 'Chi nhánh', icon: <BankIcon />, hub: true, done: true },
-      { path: '/tc-doanh-thu', label: 'Doanh thu toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
+      { path: '/luong-co-so', label: 'Lương cơ sở', icon: <AccountBookIcon />, hub: true, done: true, branchApp: false },
+      { path: '/chi-nhanh', label: 'Chi nhánh', icon: <BankIcon />, hub: true, done: true, branchApp: false },
+      { path: '/tc-doanh-thu', label: 'Doanh thu toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true, branchApp: false },
       { path: '/tc-ho-so', label: 'Hồ sơ BN toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
-      { path: '/tc-thong-ke-benh', label: 'Thống kê bệnh toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
+      { path: '/tc-thong-ke-benh', label: 'Thống kê bệnh toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true, branchApp: false },
     ],
   },
 ]
@@ -95,3 +100,16 @@ export const MENU: MenuGroup[] = [
 export const ALL_ENTRIES = MENU.flatMap((g) => g.items)
 
 export const findEntry = (path: string) => ALL_ENTRIES.find((e) => e.path === path)
+
+/**
+ * Màn có trong bản triển khai này không. Bản chi nhánh giữ danh mục thuốc/bệnh/dịch vụ và hồ sơ toàn chuỗi (đề bài yêu
+ * cầu tại mỗi chi nhánh — cần kết nối S0), bỏ các màn quản trị chuỗi; bản Trung tâm chỉ có màn làm việc với S0.
+ */
+export function availableIn(entry: MenuEntry, mode: AppMode): boolean {
+  if (mode === 'BRANCH') return entry.branchApp ?? true
+  if (mode === 'HQ') return entry.hqApp ?? entry.hub ?? false
+  return true
+}
+
+export const menuFor = (mode: AppMode): MenuGroup[] =>
+  MENU.map((g) => ({ ...g, items: g.items.filter((e) => availableIn(e, mode)) })).filter((g) => g.items.length > 0)

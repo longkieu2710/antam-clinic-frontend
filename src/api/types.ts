@@ -12,6 +12,18 @@ export interface ChiNhanh {
   inDatabase: boolean
 }
 
+/** Bản triển khai đang chạy (APP_MODE của backend) — cùng một source cho mọi cơ sở */
+export type AppMode = 'ALL' | 'BRANCH' | 'HQ'
+
+export interface AppModeInfo {
+  /** ALL: một bản cho mọi trạm · BRANCH: bản đặt tại một cơ sở · HQ: bản Trung tâm */
+  mode: AppMode
+  /** Trạm của bản chi nhánh; null ở chế độ khác */
+  localSite: string | null
+  hubSite: string
+  branchSites: string[]
+}
+
 export interface SiteStatus {
   site: string
   role: 'HUB' | 'BRANCH'

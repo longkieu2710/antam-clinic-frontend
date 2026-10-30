@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router'
 import {
   ApiIcon,
@@ -7,6 +7,7 @@ import {
   BaseHeader,
   BaseLayout,
   BaseMenu,
+  BaseResult,
   BaseSelect,
   BaseSider,
   BaseTag,
@@ -16,22 +17,29 @@ import {
 } from '../components/common'
 import type { BaseMenuGroup } from '../components/common'
 import { useSite } from '../site/useSite'
-import { MENU, findEntry } from './menu'
+import { availableIn, findEntry, menuFor } from './menu'
 
-const MENU_GROUPS: BaseMenuGroup[] = MENU.map((group) => ({
-  key: group.label,
-  label: group.label,
-  items: group.items.map((item) => ({ key: item.path, icon: item.icon, label: item.label })),
-}))
+const MODE_LABEL = { ALL: '', BRANCH: 'Bản chi nhánh', HQ: 'Bản Trung tâm' } as const
 
 export function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const notify = useNotify()
-  const { site, branch, branches, setSite, loading } = useSite()
+  const { mode, site, branch, branches, setSite, loading } = useSite()
   const [collapsed, setCollapsed] = useState(false)
 
-  const hub = findEntry(location.pathname)?.hub ?? false
+  const menuGroups = useMemo<BaseMenuGroup[]>(
+    () =>
+      menuFor(mode).map((group) => ({
+        key: group.label,
+        label: group.label,
+        items: group.items.map((item) => ({ key: item.path, icon: item.icon, label: item.label })),
+      })),
+    [mode],
+  )
+  const entry = findEntry(location.pathname)
+  const hub = mode === 'HQ' || (entry?.hub ?? false)
+  const unavailable = entry != null && !availableIn(entry, mode)
 
   const changeBranch = (value: string) => {
     setSite(value)
@@ -59,26 +67,42 @@ export function AppLayout() {
             <small>Chuỗi phòng khám tư nhân</small>
           </div>
         </div>
-        <BaseMenu groups={MENU_GROUPS} selectedKey={location.pathname} onSelect={selectMenu} />
+        <BaseMenu groups={menuGroups} selectedKey={location.pathname} onSelect={selectMenu} />
       </BaseSider>
 
       <BaseLayout>
         <BaseHeader className="app-header">
-          <BaseText type="secondary" className="hide-sm">
-            Chi nhánh đang làm việc
-          </BaseText>
-          <BaseTooltip title={hub ? 'Trang này luôn làm việc với Trung tâm (S0)' : undefined}>
-            <BaseSelect
-              value={branches.length ? site : undefined}
-              placeholder="Đang tải chi nhánh…"
-              loading={loading}
-              disabled={hub || branches.length === 0}
-              className="branch-select"
-              options={branches.map((b) => ({ value: b.site, label: `${b.shortName} (${b.maCn})` }))}
-              onChange={changeBranch}
-              aria-label="Chi nhánh đang làm việc"
-            />
-          </BaseTooltip>
+          {mode === 'ALL' ? (
+            <>
+              <BaseText type="secondary" className="hide-sm">
+                Chi nhánh đang làm việc
+              </BaseText>
+              <BaseTooltip title={hub ? 'Trang này luôn làm việc với Trung tâm (S0)' : undefined}>
+                <BaseSelect
+                  value={branches.length ? site : undefined}
+                  placeholder="Đang tải chi nhánh…"
+                  loading={loading}
+                  disabled={hub || branches.length === 0}
+                  className="branch-select"
+                  options={branches.map((b) => ({ value: b.site, label: `${b.shortName} (${b.maCn})` }))}
+                  onChange={changeBranch}
+                  aria-label="Chi nhánh đang làm việc"
+                />
+              </BaseTooltip>
+            </>
+          ) : (
+            <BaseText strong>
+              {mode === 'BRANCH' ? (
+                <>
+                  <span className="hide-sm">{MODE_LABEL[mode]} · </span>
+                  {branch?.shortName ?? site}
+                  {branch && ` (${branch.maCn})`}
+                </>
+              ) : (
+                MODE_LABEL[mode]
+              )}
+            </BaseText>
+          )}
           <div style={{ flex: 1 }} />
           {hub ? (
             <BaseTag color="orange">DB: S0 · Trung tâm</BaseTag>
@@ -93,7 +117,19 @@ export function AppLayout() {
         </BaseHeader>
 
         <BaseContent className="app-content">
-          <Outlet />
+          {unavailable ? (
+            <BaseResult
+              status="warning"
+              title={`Màn “${entry?.label}” không có trong ${MODE_LABEL[mode].toLowerCase()}`}
+              subTitle={
+                mode === 'BRANCH'
+                  ? 'Chức năng quản trị chuỗi chỉ dùng ở bản Trung tâm.'
+                  : 'Dữ liệu chi nhánh do bản chi nhánh đặt tại từng cơ sở phục vụ.'
+              }
+            />
+          ) : (
+            <Outlet />
+          )}
         </BaseContent>
       </BaseLayout>
     </BaseLayout>

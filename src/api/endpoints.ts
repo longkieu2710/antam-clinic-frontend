@@ -2,6 +2,7 @@ import { api } from './http'
 import type {
   BacSi,
   BacSiRequest,
+  AppModeInfo,
   BangLuong,
   Benh,
   BenhNhan,
@@ -40,6 +41,7 @@ import type {
 
 // ---- Hệ thống (không cần X-Site)
 export const getSiteStatus = () => api<SiteStatus[]>('/api/system/sites')
+export const getAppMode = () => api<AppModeInfo>('/api/system/mode')
 
 // ---- Danh mục chung tại S0
 export const getChiNhanh = () => api<ChiNhanh[]>('/api/master/chi-nhanh')
@@ -75,6 +77,9 @@ export const deleteYTa = (site: string, maNV: string) =>
 export const getBenhNhan = (site: string, q?: string) => api<BenhNhan[]>('/api/benh-nhan', { site, query: { q } })
 export const searchBenhNhanToanChuoi = (site: string, q: string) =>
   api<BenhNhanToanChuoi[]>('/api/benh-nhan/toan-chuoi', { site, query: { q } })
+/** Tra cứu tiếp đón chỉ trong chi nhánh — dùng khi không tra cứu được toàn chuỗi */
+export const searchBenhNhanCucBo = (site: string, q: string) =>
+  api<BenhNhanToanChuoi[]>('/api/benh-nhan/cuc-bo', { site, query: { q } })
 export const createBenhNhan = (site: string, body: BenhNhanRequest) =>
   api<BenhNhan>('/api/benh-nhan', { site, method: 'POST', body })
 export const updateBenhNhan = (site: string, maBN: string, body: BenhNhanRequest) =>

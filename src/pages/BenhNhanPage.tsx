@@ -303,9 +303,9 @@ export function BenhNhanPage() {
             <BaseFormItem
               label="Mã bệnh nhân"
               name="maBN"
-              extra={editing ? undefined : 'Để trống để hệ thống tự sinh mã không trùng toàn chuỗi'}
+              extra={editing ? undefined : `Để trống để tự sinh BN-${branch?.maCn ?? 'CN'}-0001… — mã mang mã chi nhánh nên không trùng toàn chuỗi, sinh được cả khi mất kết nối Trung tâm`}
             >
-              <BaseInput disabled={!!editing} placeholder="BN.." maxLength={20} />
+              <BaseInput disabled={!!editing} placeholder={`BN-${branch?.maCn ?? 'CN'}-…`} maxLength={20} />
             </BaseFormItem>
           </BaseCol>
           <BaseCol xs={24} md={12}>

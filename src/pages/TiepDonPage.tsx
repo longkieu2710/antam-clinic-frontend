@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router'
-import { getChiNhanhCoHoSo, searchBenhNhanToanChuoi } from '../api/endpoints'
+import { getChiNhanhCoHoSo, searchBenhNhanCucBo, searchBenhNhanToanChuoi } from '../api/endpoints'
+import { errorText } from '../api/http'
 import type { BenhNhanToanChuoi } from '../api/types'
 import {
   AddIcon,
@@ -26,6 +27,7 @@ import { age, dateVN } from '../utils/format'
 /**
  * Tiếp đón: tra cứu bệnh nhân trên toàn chuỗi (view TRA_CUU_BENH_NHAN_TOAN_CHUOI qua S0) để dùng lại mã cũ, rồi
  * tạo lượt khám hoặc lượt chữa. Bệnh nhân chưa có hồ sơ ở chi nhánh được chép sang khi tạo lượt.
+ * Không tra cứu được toàn chuỗi (mất kết nối S0 / chi nhánh khác) thì tra cứu trong chi nhánh để tiếp đón vẫn làm việc được.
  */
 export function TiepDonPage() {
   const { site, branch, branches } = useSite()
@@ -39,13 +41,21 @@ export function TiepDonPage() {
     enabled: q.trim() !== '',
     retry: false,
   })
-  const rows = search.data ?? []
+  const cucBo = search.isError
+  const local = useQuery({
+    queryKey: ['tra-cuu-cuc-bo', site, q],
+    queryFn: () => searchBenhNhanCucBo(site, q),
+    enabled: cucBo,
+    retry: false,
+  })
+  const rows = (cucBo ? local.data : search.data) ?? []
   const coHoSo = useQuery({
     queryKey: ['co-ho-so', rows.map((r) => r.maBN).join(',')],
     queryFn: () => getChiNhanhCoHoSo(rows.map((r) => r.maBN)),
-    enabled: rows.length > 0,
+    enabled: rows.length > 0 && !cucBo,
     retry: false,
   })
+  const pham = cucBo ? `tại ${branch?.shortName ?? site}` : 'trên toàn chuỗi'
   const tenCn = (maCn: string) => branches.find((b) => b.maCn === maCn)?.shortName ?? maCn
 
   const columns: BaseColumns<BenhNhanToanChuoi> = [
@@ -140,15 +150,24 @@ export function TiepDonPage() {
         />
         <div className="muted" style={{ marginTop: 8 }}>
           Khớp đúng CCCD / thẻ BHYT / số điện thoại / mã bệnh nhân, hoặc một phần họ tên. Đọc qua{' '}
-          <code>TRA_CUU_BENH_NHAN_TOAN_CHUOI</code> (chi nhánh → postgres_fdw → S0 → 3 chi nhánh) nên cần cả 4 trạm đang chạy.
+          <code>TRA_CUU_BENH_NHAN_TOAN_CHUOI</code> (chi nhánh → postgres_fdw → S0 → 3 chi nhánh) nên cần cả 4 trạm đang chạy; mất
+          kết nối thì tự tra cứu trong chi nhánh.
         </div>
       </BaseCard>
 
-      {search.error && <BaseErrorAlert title="Không tra cứu được toàn chuỗi" error={search.error} />}
+      {cucBo && (
+        <BaseAlert
+          type="warning"
+          style={{ marginBottom: 12 }}
+          title={`Không tra cứu được toàn chuỗi — đang hiện kết quả ${pham}`}
+          description={`${errorText(search.error)} Bệnh nhân chỉ có hồ sơ ở chi nhánh khác sẽ không hiện ở đây; không thấy thì thêm hồ sơ mới (mã do chi nhánh cấp).`}
+        />
+      )}
+      {local.error && <BaseErrorAlert title={`Không tra cứu được ${pham}`} error={local.error} />}
 
-      {q && search.isSuccess && rows.length === 0 && (
+      {q && (cucBo ? local.isSuccess : search.isSuccess) && rows.length === 0 && (
         <BaseCard>
-          <BaseEmpty description={`Không tìm thấy bệnh nhân khớp “${q}” trên toàn chuỗi.`}>
+          <BaseEmpty description={`Không tìm thấy bệnh nhân khớp “${q}” ${pham}.`}>
             <BaseButton type="primary" icon={<AddIcon />} onClick={() => navigate('/benh-nhan?them=1')}>
               Thêm bệnh nhân mới
             </BaseButton>
@@ -169,7 +188,7 @@ export function TiepDonPage() {
           {coHoSo.error && (
             <BaseAlert type="warning" style={{ marginBottom: 12 }} title="Không đọc được chi nhánh có hồ sơ (S0)" description="Vẫn tạo lượt được." />
           )}
-          <BaseCard title={`Kết quả tra cứu toàn chuỗi · ${rows.length} bệnh nhân`} styles={{ body: { padding: 0 } }}>
+          <BaseCard title={`Kết quả tra cứu ${pham} · ${rows.length} bệnh nhân`} styles={{ body: { padding: 0 } }}>
             <BaseTable<BenhNhanToanChuoi> rowKey="maBN" unit="bệnh nhân" columns={columns} dataSource={rows} scroll={{ x: 1050 }} pagination={false} />
           </BaseCard>
         </>
