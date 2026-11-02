@@ -179,8 +179,8 @@ export interface BenhNhanRequest {
   tienSuDiUng?: string | null
 }
 
-/** Kết quả tra cứu toàn chuỗi (view TRA_CUU_BENH_NHAN_TOAN_CHUOI qua postgres_fdw) */
-export interface BenhNhanToanChuoi {
+/** Bệnh nhân có hồ sơ tại chi nhánh, khi tiếp đón */
+export interface BenhNhanTiepDon {
   maBN: string
   hoTen: string
   ngaySinh: string | null
@@ -189,10 +189,24 @@ export interface BenhNhanToanChuoi {
   soDienThoai: string | null
   soTheBHYT: string | null
   diaChi: string | null
-  /** đã có hồ sơ ở chi nhánh đang chọn */
-  coTaiChiNhanh: boolean
-  /** số đợt "Đang điều trị" tại chi nhánh đang chọn (> 0 thì tạo được lượt chữa) */
+  /** số đợt "Đang điều trị" tại chi nhánh (> 0 thì tạo được lượt chữa) */
   soDotDangDieuTri: number
+}
+
+/** Hàm tim_ma_benh_nhan ở S0: số CCCD / thẻ BHYT đã có mã ở chi nhánh nào — không kèm thông tin cá nhân */
+export interface ChiMucBenhNhan {
+  maBN: string
+  maCn: string
+  ketNoi: boolean
+}
+
+/** GET /api/benh-nhan/tiep-don */
+export interface TiepDon {
+  taiChiNhanh: BenhNhanTiepDon[]
+  /** chỉ khi từ khoá là số CCCD / thẻ BHYT đầy đủ mà chi nhánh chưa có hồ sơ */
+  noiKhac: ChiMucBenhNhan[]
+  daTraToanChuoi: boolean
+  canhBao: string | null
 }
 
 export interface ThietBi {
@@ -531,7 +545,6 @@ export interface TaoLuot {
   maCDDT: string[]
   lanThu: number | null
   ketThucDot: boolean
-  daChepBenhNhan: boolean
   tongTien: number
   canhBao: string[]
 }

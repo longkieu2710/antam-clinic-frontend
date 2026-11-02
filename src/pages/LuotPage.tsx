@@ -16,6 +16,7 @@ import {
   BaseTable,
   BaseTag,
   BaseText,
+  BaseWritable,
   RetweetIcon,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
@@ -90,14 +91,14 @@ export function LuotPage() {
         title="Danh sách lượt khám / chữa"
         description={`Các lượt tại ${branch?.tenCn ?? site} — bấm một dòng để xem chẩn đoán, y tá hỗ trợ, chi phí; xoá được lượt nhập nhầm trong tháng.`}
         extra={
-          <>
+          <BaseWritable>
             <BaseButton icon={<RetweetIcon />} onClick={() => navigate('/luot-chua-moi')}>
               Lượt chữa
             </BaseButton>
             <BaseButton type="primary" icon={<AddIcon />} onClick={() => navigate('/luot-kham-moi')}>
               Lượt khám
             </BaseButton>
-          </>
+          </BaseWritable>
         }
       />
 

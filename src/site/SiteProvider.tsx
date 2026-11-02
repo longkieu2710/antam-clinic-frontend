@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
-import { getAppMode, getChiNhanh } from '../api/endpoints'
+import { getAppMode, getChiNhanh, getChiNhanhCucBo } from '../api/endpoints'
 import { BaseSkeleton } from '../components/common'
 import { SiteContext, type SiteContextValue } from './context'
 
@@ -16,18 +16,24 @@ function readStoredSite(): string {
 
 /**
  * Giữ "chi nhánh đang làm việc" cho toàn ứng dụng.
- * Bản triển khai lấy từ /api/system/mode: bản chi nhánh (BRANCH) khoá vào trạm của cơ sở, không cho chọn chi nhánh khác.
- * Danh sách chi nhánh lấy từ /api/master/chi-nhanh (bảng CHI_NHANH ở S0 + cấu hình trạm của backend; S0 tắt thì backend
- * trả tên trạm từ cấu hình).
+ * Bản triển khai lấy từ /api/system/mode: bản chi nhánh (BRANCH) khoá vào trạm của cơ sở, không cho chọn chi nhánh khác;
+ * bản Trung tâm (HQ) chọn được chi nhánh để xem.
+ * Danh sách chi nhánh: bản chi nhánh đọc bản sao CHI_NHANH tại chỗ (/api/chi-nhanh — không cần S0), bản khác đọc
+ * /api/master/chi-nhanh ở S0 (S0 tắt thì backend trả tên trạm từ cấu hình).
  */
 export function SiteProvider({ children }: { children: ReactNode }) {
   // Không có /api/system/mode (backend cũ / không gọi được) → coi như bản ALL như trước
   const modeQuery = useQuery({ queryKey: ['app-mode'], queryFn: getAppMode, staleTime: Infinity, retry: 3 })
-  const branchesQuery = useQuery({ queryKey: ['chi-nhanh'], queryFn: getChiNhanh, staleTime: 60_000 })
   const [selected, setSelected] = useState<string>(readStoredSite)
 
   const mode = modeQuery.data?.mode ?? 'ALL'
   const lockedSite = mode === 'BRANCH' ? (modeQuery.data?.localSite ?? undefined) : undefined
+  const branchesQuery = useQuery({
+    queryKey: ['chi-nhanh', lockedSite ?? 'S0'],
+    queryFn: () => (lockedSite ? getChiNhanhCucBo(lockedSite) : getChiNhanh()),
+    staleTime: 60_000,
+    enabled: !modeQuery.isPending,
+  })
 
   const setSite = useCallback((site: string) => {
     setSelected(site)

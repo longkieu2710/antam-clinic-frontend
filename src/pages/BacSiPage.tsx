@@ -23,6 +23,7 @@ import {
   BaseTag,
   BaseTagsInput,
   BaseText,
+  BaseWritable,
   useBaseForm,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
@@ -185,9 +186,11 @@ export function BacSiPage() {
         title="Bác sĩ"
         description={`Nhân viên loại BS của ${branch?.tenCn ?? site} (NHAN_VIEN ⟶ BAC_SI).`}
         extra={
-          <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>
-            Thêm bác sĩ
-          </BaseButton>
+          <BaseWritable>
+            <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>
+              Thêm bác sĩ
+            </BaseButton>
+          </BaseWritable>
         }
       />
 

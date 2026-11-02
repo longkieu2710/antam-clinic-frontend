@@ -46,14 +46,6 @@ export function LuotSavedModal({ saved, onClose }: Props) {
         subTitle={`${saved.tenBN ?? saved.maBN} · ${detail} · Tổng ${money(saved.tongTien)}`}
         style={{ padding: '16px 0' }}
       />
-      {saved.daChepBenhNhan && (
-        <BaseAlert
-          type="info"
-          title="Đã chép hồ sơ bệnh nhân sang chi nhánh"
-          description="Bệnh nhân chưa có hồ sơ ở chi nhánh này — bản ghi BENH_NHAN (giữ nguyên mã) được chép từ view toàn chuỗi trong cùng transaction."
-          style={{ marginBottom: 8 }}
-        />
-      )}
       {saved.canhBao.map((c) => (
         <BaseAlert key={c} type="warning" title={c} style={{ marginBottom: 8 }} />
       ))}

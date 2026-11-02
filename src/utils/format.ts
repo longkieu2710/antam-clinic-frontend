@@ -15,3 +15,7 @@ export const age = (iso: string | null | undefined) => (iso ? dayjs().diff(dayjs
 /** '' / khoảng trắng → null, để backend không ghi chuỗi rỗng vào cột UNIQUE. */
 export const blankToNull = (value: string | null | undefined) =>
   value == null || value.trim() === '' ? null : value.trim()
+
+/** Gom các dòng tra mã toàn chuỗi theo mã bệnh nhân: [[maBN, [maCn…]]] — một người có thể có hồ sơ ở nhiều chi nhánh */
+export const gomTheoMa = (rows: { maBN: string; maCn: string }[]): [string, string[]][] =>
+  Object.entries(rows.reduce<Record<string, string[]>>((m, x) => ({ ...m, [x.maBN]: [...(m[x.maBN] ?? []), x.maCn] }), {}))

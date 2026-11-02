@@ -7,6 +7,7 @@ import {
   BaseHeader,
   BaseLayout,
   BaseMenu,
+  BaseReadOnlyProvider,
   BaseResult,
   BaseSelect,
   BaseSider,
@@ -20,6 +21,7 @@ import { useSite } from '../site/useSite'
 import { availableIn, findEntry, menuFor } from './menu'
 
 const MODE_LABEL = { ALL: '', BRANCH: 'Bản chi nhánh', HQ: 'Bản Trung tâm' } as const
+const SELECT_LABEL = { ALL: 'Chi nhánh đang làm việc', BRANCH: 'Máy chi nhánh', HQ: 'Xem chi nhánh' } as const
 
 export function AppLayout() {
   const location = useLocation()
@@ -38,13 +40,21 @@ export function AppLayout() {
     [mode],
   )
   const entry = findEntry(location.pathname)
-  const hub = mode === 'HQ' || (entry?.hub ?? false)
+  const hub = entry?.hub ?? false
   const unavailable = entry != null && !availableIn(entry, mode)
+  // Trung tâm xem dữ liệu chi nhánh: ẩn thêm / sửa / xoá (backend cũng chặn bằng 403 READ_ONLY)
+  const readOnly = mode === 'HQ' && !hub
+  const selectTooltip =
+    mode === 'BRANCH'
+      ? 'Máy này là chi nhánh cố định — đổi ở dòng app.may-nay trong application.yml'
+      : hub
+        ? 'Trang này luôn làm việc với Trung tâm (S0)'
+        : undefined
 
   const changeBranch = (value: string) => {
     setSite(value)
     const target = branches.find((b) => b.site === value)
-    notify.info(`Đang làm việc tại ${target?.tenCn ?? value} — mọi API gửi X-Site: ${value}`)
+    notify.info(`${mode === 'HQ' ? 'Đang xem' : 'Đang làm việc tại'} ${target?.tenCn ?? value} — mọi API gửi X-Site: ${value}`)
   }
 
   const selectMenu = (path: string) => {
@@ -72,39 +82,25 @@ export function AppLayout() {
 
       <BaseLayout>
         <BaseHeader className="app-header">
-          {mode === 'ALL' ? (
-            <>
-              <BaseText type="secondary" className="hide-sm">
-                Chi nhánh đang làm việc
-              </BaseText>
-              <BaseTooltip title={hub ? 'Trang này luôn làm việc với Trung tâm (S0)' : undefined}>
-                <BaseSelect
-                  value={branches.length ? site : undefined}
-                  placeholder="Đang tải chi nhánh…"
-                  loading={loading}
-                  disabled={hub || branches.length === 0}
-                  className="branch-select"
-                  options={branches.map((b) => ({ value: b.site, label: `${b.shortName} (${b.maCn})` }))}
-                  onChange={changeBranch}
-                  aria-label="Chi nhánh đang làm việc"
-                />
-              </BaseTooltip>
-            </>
-          ) : (
-            <BaseText strong>
-              {mode === 'BRANCH' ? (
-                <>
-                  <span className="hide-sm">{MODE_LABEL[mode]} · </span>
-                  {branch?.shortName ?? site}
-                  {branch && ` (${branch.maCn})`}
-                </>
-              ) : (
-                MODE_LABEL[mode]
-              )}
-            </BaseText>
-          )}
+          {mode !== 'ALL' && <BaseTag color={mode === 'HQ' ? 'orange' : 'green'} className="hide-sm">{MODE_LABEL[mode]}</BaseTag>}
+          <BaseText type="secondary" className="hide-sm">
+            {SELECT_LABEL[mode]}
+          </BaseText>
+          <BaseTooltip title={selectTooltip}>
+            <BaseSelect
+              value={branches.length ? site : undefined}
+              placeholder="Đang tải chi nhánh…"
+              loading={loading}
+              disabled={mode === 'BRANCH' || hub || branches.length === 0}
+              className="branch-select"
+              options={branches.map((b) => ({ value: b.site, label: `${b.shortName} (${b.maCn})` }))}
+              onChange={changeBranch}
+              aria-label={SELECT_LABEL[mode]}
+            />
+          </BaseTooltip>
+          {readOnly && <BaseTag color="gold">Chỉ xem</BaseTag>}
           <div style={{ flex: 1 }} />
-          {hub ? (
+          {hub && !unavailable ? (
             <BaseTag color="orange">DB: S0 · Trung tâm</BaseTag>
           ) : (
             <BaseTag color="green">
@@ -123,12 +119,14 @@ export function AppLayout() {
               title={`Màn “${entry?.label}” không có trong ${MODE_LABEL[mode].toLowerCase()}`}
               subTitle={
                 mode === 'BRANCH'
-                  ? 'Chức năng quản trị chuỗi chỉ dùng ở bản Trung tâm.'
-                  : 'Dữ liệu chi nhánh do bản chi nhánh đặt tại từng cơ sở phục vụ.'
+                  ? 'Chức năng của Trung tâm chỉ dùng ở máy Trung tâm.'
+                  : 'Trung tâm chỉ xem dữ liệu chi nhánh — tiếp đón và tạo lượt làm ở máy của chi nhánh đó.'
               }
             />
           ) : (
-            <Outlet />
+            <BaseReadOnlyProvider readOnly={readOnly}>
+              <Outlet />
+            </BaseReadOnlyProvider>
           )}
         </BaseContent>
       </BaseLayout>

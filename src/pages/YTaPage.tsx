@@ -24,6 +24,7 @@ import {
   BaseTag,
   BaseTagsInput,
   BaseText,
+  BaseWritable,
   useBaseForm,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
@@ -182,9 +183,11 @@ export function YTaPage() {
         title="Y tá"
         description={`Nhân viên loại YT của ${branch?.tenCn ?? site} (NHAN_VIEN ⟶ Y_TA). Mỗi lượt hỗ trợ được thưởng 200.000 ₫ khi tính lương.`}
         extra={
-          <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>
-            Thêm y tá
-          </BaseButton>
+          <BaseWritable>
+            <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>
+              Thêm y tá
+            </BaseButton>
+          </BaseWritable>
         }
       />
 

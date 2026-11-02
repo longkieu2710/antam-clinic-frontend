@@ -15,6 +15,7 @@ import {
   BaseTable,
   BaseText,
   BaseTextArea,
+  BaseWritable,
   useBaseForm,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
@@ -99,9 +100,11 @@ export function KhoaPage() {
         title="Khoa"
         description={`Khoa phòng của ${branch?.tenCn ?? site} (KHOA). Mỗi khoa thuộc đúng 1 chi nhánh; tên khoa không trùng trong chi nhánh.`}
         extra={
-          <BaseButton type="primary" icon={<AddIcon />} onClick={() => openForm(null)}>
-            Thêm khoa
-          </BaseButton>
+          <BaseWritable>
+            <BaseButton type="primary" icon={<AddIcon />} onClick={() => openForm(null)}>
+              Thêm khoa
+            </BaseButton>
+          </BaseWritable>
         }
       />
 

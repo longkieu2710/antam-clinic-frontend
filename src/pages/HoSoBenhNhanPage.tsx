@@ -6,25 +6,26 @@ import type { ChiPhi, DotDieuTri, LuotHoSo } from '../api/types'
 import {
   BaseAlert,
   BaseButton,
-  BaseDeleteButton,
-  BaseSpace,
-  EyeIcon,
-  RetweetIcon,
-  useNotify,
   BaseCard,
   BaseCol,
+  BaseDeleteButton,
   BaseDescriptions,
   BaseEmpty,
   BaseErrorAlert,
   BaseRow,
   BaseSelect,
   BaseSkeleton,
+  BaseSpace,
   BaseStatistic,
   BaseSummaryCell,
   BaseSummaryRow,
   BaseTable,
   BaseTag,
   BaseText,
+  BaseWritable,
+  EyeIcon,
+  RetweetIcon,
+  useNotify,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
 import { PageTitle } from '../layout/PageTitle'
@@ -262,13 +263,15 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
                   action={
                     !chain && (
                       <BaseSpace direction="vertical" size={4}>
-                        <BaseButton
-                          size="small"
-                          icon={<RetweetIcon />}
-                          onClick={() => navigate(`/luot-chua-moi?maBN=${encodeURIComponent(d.maBN)}&maCDDT=${encodeURIComponent(d.maCDDT)}`)}
-                        >
-                          Tạo lượt chữa
-                        </BaseButton>
+                        <BaseWritable>
+                          <BaseButton
+                            size="small"
+                            icon={<RetweetIcon />}
+                            onClick={() => navigate(`/luot-chua-moi?maBN=${encodeURIComponent(d.maBN)}&maCDDT=${encodeURIComponent(d.maCDDT)}`)}
+                          >
+                            Tạo lượt chữa
+                          </BaseButton>
+                        </BaseWritable>
                         <BaseDeleteButton
                           title={`Ngừng điều trị đợt "${d.tenBenh}"?`}
                           description="Bệnh nhân bỏ dở điều trị (BR12) — đợt kết thúc, bác sĩ không được thưởng."

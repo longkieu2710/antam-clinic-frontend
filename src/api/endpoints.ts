@@ -7,7 +7,6 @@ import type {
   Benh,
   BenhNhan,
   BenhNhanRequest,
-  BenhNhanToanChuoi,
   BenhNhanTomTat,
   BenhRequest,
   ChiNhanh,
@@ -35,6 +34,7 @@ import type {
   Thuoc,
   TongQuan,
   ThuocRequest,
+  TiepDon,
   YTa,
   YTaRequest,
 } from './types'
@@ -45,6 +45,8 @@ export const getAppMode = () => api<AppModeInfo>('/api/system/mode')
 
 // ---- Danh mục chung tại S0
 export const getChiNhanh = () => api<ChiNhanh[]>('/api/master/chi-nhanh')
+/** Bản sao CHI_NHANH tại chi nhánh — bản chi nhánh không vào được /api/master/** */
+export const getChiNhanhCucBo = (site: string) => api<ChiNhanh[]>('/api/chi-nhanh', { site })
 export const updateChiNhanh = (maCn: string, body: Pick<ChiNhanh, 'tenCn' | 'diaChi' | 'soDienThoai'>) =>
   api<unknown>(`/api/master/chi-nhanh/${encodeURIComponent(maCn)}`, { method: 'PUT', body })
 
@@ -75,11 +77,8 @@ export const deleteYTa = (site: string, maNV: string) =>
   api<DeleteResult>(`/api/y-ta/${encodeURIComponent(maNV)}`, { site, method: 'DELETE' })
 
 export const getBenhNhan = (site: string, q?: string) => api<BenhNhan[]>('/api/benh-nhan', { site, query: { q } })
-export const searchBenhNhanToanChuoi = (site: string, q: string) =>
-  api<BenhNhanToanChuoi[]>('/api/benh-nhan/toan-chuoi', { site, query: { q } })
-/** Tra cứu tiếp đón chỉ trong chi nhánh — dùng khi không tra cứu được toàn chuỗi */
-export const searchBenhNhanCucBo = (site: string, q: string) =>
-  api<BenhNhanToanChuoi[]>('/api/benh-nhan/cuc-bo', { site, query: { q } })
+/** Tiếp đón: hồ sơ tại chi nhánh; với số CCCD / thẻ BHYT đầy đủ thêm mã bệnh nhân ở chi nhánh khác (không thông tin cá nhân) */
+export const tiepDon = (site: string, q: string) => api<TiepDon>('/api/benh-nhan/tiep-don', { site, query: { q } })
 export const createBenhNhan = (site: string, body: BenhNhanRequest) =>
   api<BenhNhan>('/api/benh-nhan', { site, method: 'POST', body })
 export const updateBenhNhan = (site: string, maBN: string, body: BenhNhanRequest) =>
@@ -166,8 +165,6 @@ export const getDichVuReplica = (site: string) => api<DichVu[]>('/api/dich-vu', 
 // ---- Toàn chuỗi (S0)
 export const getBenhNhanToanChuoiHq = (q?: string) => api<BenhNhanTomTat[]>('/api/hq/benh-nhan', { query: { q } })
 /** → { maBN: ['CN1', 'CN3'] } */
-export const getChiNhanhCoHoSo = (ma: string[]) =>
-  api<Record<string, string[]>>('/api/hq/benh-nhan/chi-nhanh', { query: { ma: ma.join(',') } })
 export const getHoSoToanChuoi = (maBN: string) =>
   api<HoSoBenhNhan>(`/api/hq/benh-nhan/${encodeURIComponent(maBN)}/ho-so`)
 export const getDoanhThuToanChuoi = (tu: string, den: string) =>

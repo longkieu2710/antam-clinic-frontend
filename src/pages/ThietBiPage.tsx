@@ -22,6 +22,7 @@ import {
   BaseTable,
   BaseTag,
   BaseText,
+  BaseWritable,
   useBaseForm,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
@@ -138,9 +139,11 @@ export function ThietBiPage() {
         title="Thiết bị"
         description={`Thiết bị y tế của ${branch?.tenCn ?? site} (THIET_BI). Đổi đơn giá không ảnh hưởng lượt cũ — SU_DUNG_TB lưu đơn giá áp dụng (BR7).`}
         extra={
-          <BaseButton type="primary" icon={<AddIcon />} onClick={() => openForm(null)}>
-            Thêm thiết bị
-          </BaseButton>
+          <BaseWritable>
+            <BaseButton type="primary" icon={<AddIcon />} onClick={() => openForm(null)}>
+              Thêm thiết bị
+            </BaseButton>
+          </BaseWritable>
         }
       />
 

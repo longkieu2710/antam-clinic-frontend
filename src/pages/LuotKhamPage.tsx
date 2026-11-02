@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { createLuotKham, getBenhNhan, getDotDangDieuTri, searchBenhNhanToanChuoi } from '../api/endpoints'
+import { createLuotKham, getBenhNhan, getDotDangDieuTri } from '../api/endpoints'
 import type { ChanDoanInput, LuotKhamRequest, TaoLuot } from '../api/types'
 import {
   AddIcon,
@@ -87,14 +87,6 @@ export function LuotKhamPage() {
 
   const local = useQuery({ queryKey: ['benh-nhan', site, ''], queryFn: () => getBenhNhan(site) })
   const localBN = (local.data ?? []).find((p) => p.maBN === maBN)
-  // Bệnh nhân chưa có hồ sơ tại chi nhánh (đến từ màn Tiếp đón): lấy thông tin từ view toàn chuỗi
-  const chain = useQuery({
-    queryKey: ['benh-nhan-toan-chuoi', site, maBNParam],
-    queryFn: () => searchBenhNhanToanChuoi(site, maBNParam!),
-    enabled: !!maBNParam && !!local.data && !local.data.some((p) => p.maBN === maBNParam),
-    retry: false,
-  })
-  const chainBN = (chain.data ?? []).find((p) => p.maBN === maBN)
   const dotMo = useQuery({
     queryKey: ['dot-dang', site, maBN],
     queryFn: () => getDotDangDieuTri(site, maBN!),
@@ -149,9 +141,6 @@ export function LuotKhamPage() {
 
   const bnOptions = [
     ...(local.data ?? []).map((p) => ({ value: p.maBN, label: `${p.hoTen} · ${p.maBN}${p.cccd ? ` · ${p.cccd}` : ''}` })),
-    ...(chain.data ?? [])
-      .filter((p) => !(local.data ?? []).some((x) => x.maBN === p.maBN))
-      .map((p) => ({ value: p.maBN, label: `${p.hoTen} · ${p.maBN} · từ chi nhánh khác` })),
   ]
   const bacSiOptions = cat.bacSi
     .filter((b) => !maKhoa || b.maKhoa === maKhoa)
@@ -169,7 +158,7 @@ export function LuotKhamPage() {
   const tien = tinhTien(values, cat.catalogs)
   const soChanDoan = (values.chanDoan ?? []).filter((c) => c?.maBenh).length
   const soYTa = (values.yTa ?? []).length
-  const bn = localBN ?? chainBN
+  const bn = localBN
 
   return (
     <>
@@ -212,11 +201,11 @@ export function LuotKhamPage() {
                   ]}
                 />
               )}
-              {maBN && !localBN && chainBN && (
+              {maBN && local.data && !localBN && (
                 <BaseAlert
-                  type="info"
-                  title={`Chưa có hồ sơ tại ${branch?.shortName ?? site}`}
-                  description={`Khi lưu, backend chép bản ghi BENH_NHAN (giữ mã ${maBN}) từ view toàn chuỗi vào ${site} trước, trong cùng transaction.`}
+                  type="warning"
+                  title={`Bệnh nhân ${maBN} chưa có hồ sơ tại ${branch?.shortName ?? site}`}
+                  description="Lập hồ sơ ở màn Tiếp đón (nhập số CCCD / thẻ BHYT để dùng lại mã cũ) rồi tạo lượt."
                 />
               )}
               {dangMo.length > 0 && (

@@ -2,9 +2,11 @@ import { Button, Popconfirm } from 'antd'
 import type { ButtonProps } from 'antd'
 import type { ReactNode } from 'react'
 import { DeleteIcon, EditIcon } from '../icons'
+import { useBaseReadOnly } from '../provider/readOnlyContext'
 
-/** Nút "Sửa" dạng link nhỏ — dùng trong cột thao tác của bảng. */
+/** Nút "Sửa" dạng link nhỏ — dùng trong cột thao tác của bảng. Ẩn ở chế độ chỉ xem. */
 export function BaseEditButton({ children = 'Sửa', ...rest }: ButtonProps) {
+  if (useBaseReadOnly()) return null
   return (
     <Button type="link" size="small" icon={<EditIcon />} {...rest}>
       {children}
@@ -27,7 +29,7 @@ interface BaseDeleteButtonProps {
   children?: ReactNode
 }
 
-/** Nút "Xoá" dạng link đỏ, bấm vào hiện hộp xác nhận trước khi xoá. */
+/** Nút "Xoá" dạng link đỏ, bấm vào hiện hộp xác nhận trước khi xoá. Ẩn ở chế độ chỉ xem. */
 export function BaseDeleteButton({
   title,
   description,
@@ -37,6 +39,7 @@ export function BaseDeleteButton({
   disabled,
   children = 'Xoá',
 }: BaseDeleteButtonProps) {
+  if (useBaseReadOnly()) return null
   return (
     <Popconfirm
       title={title}

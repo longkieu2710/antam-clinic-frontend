@@ -17,6 +17,7 @@ import {
   BaseTable,
   BaseTag,
   BaseTooltip,
+  BaseWritable,
   ProfileIcon,
   RetweetIcon,
   useNotify,
@@ -169,13 +170,15 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
                     <BaseSpace>
                       <BaseTag color={trangThaiColor(x.trangThai)}>{x.trangThai}</BaseTag>
                       {x.trangThai === 'Đang điều trị' && (
-                        <BaseButton
-                          size="small"
-                          icon={<RetweetIcon />}
-                          onClick={() => go(`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`)}
-                        >
-                          Tạo lượt chữa
-                        </BaseButton>
+                        <BaseWritable>
+                          <BaseButton
+                            size="small"
+                            icon={<RetweetIcon />}
+                            onClick={() => go(`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`)}
+                          >
+                            Tạo lượt chữa
+                          </BaseButton>
+                        </BaseWritable>
                       )}
                     </BaseSpace>
                   </li>

@@ -64,11 +64,16 @@ export function DashboardPage() {
             )}
             {mode === 'BRANCH' && (
               <li>
-                Bản chi nhánh: mọi màn chi nhánh luôn dùng trạm {site} (<code>APP_LOCAL_SITE</code>). Mất kết nối Trung tâm thì vẫn tiếp
-                đón, khám chữa và báo cáo chi nhánh bình thường.
+                Máy chi nhánh: chỉ dữ liệu của trạm {site} (dòng <code>app.may-nay</code> trong application.yml), không xem được chi
+                nhánh khác hay chức năng Trung tâm. Mất kết nối Trung tâm vẫn tiếp đón, khám chữa và báo cáo chi nhánh bình thường.
               </li>
             )}
-            {mode === 'HQ' && <li>Bản Trung tâm: chỉ làm việc với S0; các trạm chi nhánh hiện ở đây để theo dõi kết nối.</li>}
+            {mode === 'HQ' && (
+              <li>
+                Máy Trung tâm: danh mục chung và báo cáo toàn chuỗi ở S0; chọn chi nhánh trên thanh tiêu đề để xem dữ liệu của chi nhánh
+                đó — chỉ xem, thêm / sửa / xoá làm ở máy chi nhánh.
+              </li>
+            )}
             <li>Danh mục chung (thuốc, chi nhánh…) luôn ghi ở S0 qua <code>/api/master/**</code>; Logical Replication tự đẩy xuống S1–S3.</li>
             <li>Báo cáo toàn chuỗi đọc ở S0 qua <code>/api/hq/**</code> (view gộp 3 chi nhánh bằng postgres_fdw).</li>
           </ul>

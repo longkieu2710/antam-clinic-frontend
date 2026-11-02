@@ -32,9 +32,9 @@ export interface MenuEntry {
   hub?: boolean
   /** Đã có màn hình thật; false = trang "đang phát triển" */
   done?: boolean
-  /** Có trong bản chi nhánh (APP_MODE=branch). Mặc định có */
+  /** Có trong bản chi nhánh. Mặc định: mọi màn trừ màn của Trung tâm (hub) */
   branchApp?: boolean
-  /** Có trong bản Trung tâm (APP_MODE=hq). Mặc định = hub */
+  /** Có trong bản Trung tâm (màn chi nhánh ở đó chỉ xem). Mặc định có; false cho màn chỉ để ghi (tiếp đón, tạo lượt) */
   hqApp?: boolean
 }
 
@@ -49,16 +49,16 @@ export const MENU: MenuGroup[] = [
   {
     label: 'Tổng quan',
     items: [
-      { path: '/', label: 'Tổng quan hệ thống', icon: <DashboardIcon />, done: true, hqApp: true },
+      { path: '/', label: 'Tổng quan hệ thống', icon: <DashboardIcon />, done: true },
       { path: '/tong-quan', label: 'Tổng quan chi nhánh', icon: <HomeIcon />, done: true },
     ],
   },
   {
     label: 'Tiếp đón & khám chữa',
     items: [
-      { path: '/tiep-don', label: 'Tiếp đón', icon: <SearchIcon />, done: true },
-      { path: '/luot-kham-moi', label: 'Tạo lượt khám', icon: <FileAddIcon />, done: true },
-      { path: '/luot-chua-moi', label: 'Tạo lượt chữa', icon: <RetweetIcon />, done: true },
+      { path: '/tiep-don', label: 'Tiếp đón', icon: <SearchIcon />, done: true, hqApp: false },
+      { path: '/luot-kham-moi', label: 'Tạo lượt khám', icon: <FileAddIcon />, done: true, hqApp: false },
+      { path: '/luot-chua-moi', label: 'Tạo lượt chữa', icon: <RetweetIcon />, done: true, hqApp: false },
       { path: '/luot', label: 'Danh sách lượt', icon: <ListIcon />, done: true },
     ],
   },
@@ -70,6 +70,7 @@ export const MENU: MenuGroup[] = [
       { path: '/benh-nhan', label: 'Bệnh nhân', icon: <IdCardIcon />, done: true },
       { path: '/khoa', label: 'Khoa', icon: <ApartmentIcon />, done: true },
       { path: '/thiet-bi', label: 'Thiết bị', icon: <ToolIcon />, done: true },
+      { path: '/thuoc-chi-nhanh', label: 'Thuốc (bản sao)', icon: <ExperimentIcon />, done: true, hqApp: false },
     ],
   },
   {
@@ -88,11 +89,11 @@ export const MENU: MenuGroup[] = [
       { path: '/thuoc', label: 'Thuốc', icon: <ExperimentIcon />, hub: true, done: true },
       { path: '/benh', label: 'Bệnh (ICD-10)', icon: <HeartIcon />, hub: true, done: true },
       { path: '/dich-vu', label: 'Dịch vụ y tế', icon: <SolutionIcon />, hub: true, done: true },
-      { path: '/luong-co-so', label: 'Lương cơ sở', icon: <AccountBookIcon />, hub: true, done: true, branchApp: false },
-      { path: '/chi-nhanh', label: 'Chi nhánh', icon: <BankIcon />, hub: true, done: true, branchApp: false },
-      { path: '/tc-doanh-thu', label: 'Doanh thu toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true, branchApp: false },
+      { path: '/luong-co-so', label: 'Lương cơ sở', icon: <AccountBookIcon />, hub: true, done: true },
+      { path: '/chi-nhanh', label: 'Chi nhánh', icon: <BankIcon />, hub: true, done: true },
+      { path: '/tc-doanh-thu', label: 'Doanh thu toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
       { path: '/tc-ho-so', label: 'Hồ sơ BN toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
-      { path: '/tc-thong-ke-benh', label: 'Thống kê bệnh toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true, branchApp: false },
+      { path: '/tc-thong-ke-benh', label: 'Thống kê bệnh toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
     ],
   },
 ]
@@ -102,12 +103,12 @@ export const ALL_ENTRIES = MENU.flatMap((g) => g.items)
 export const findEntry = (path: string) => ALL_ENTRIES.find((e) => e.path === path)
 
 /**
- * Màn có trong bản triển khai này không. Bản chi nhánh giữ danh mục thuốc/bệnh/dịch vụ và hồ sơ toàn chuỗi (đề bài yêu
- * cầu tại mỗi chi nhánh — cần kết nối S0), bỏ các màn quản trị chuỗi; bản Trung tâm chỉ có màn làm việc với S0.
+ * Màn có trong bản triển khai này không. Bản chi nhánh: chỉ dữ liệu của chi nhánh đó (thuốc xem ở bản sao), không có màn
+ * Trung tâm. Bản Trung tâm: màn Trung tâm + xem dữ liệu chi nhánh đang chọn (chỉ xem — bỏ tiếp đón, tạo lượt).
  */
 export function availableIn(entry: MenuEntry, mode: AppMode): boolean {
-  if (mode === 'BRANCH') return entry.branchApp ?? true
-  if (mode === 'HQ') return entry.hqApp ?? entry.hub ?? false
+  if (mode === 'BRANCH') return entry.branchApp ?? !entry.hub
+  if (mode === 'HQ') return entry.hqApp ?? true
   return true
 }
 

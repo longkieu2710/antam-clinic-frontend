@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router'
-import { getChiNhanhCoHoSo, searchBenhNhanCucBo, searchBenhNhanToanChuoi } from '../api/endpoints'
-import { errorText } from '../api/http'
-import type { BenhNhanToanChuoi } from '../api/types'
+import { tiepDon } from '../api/endpoints'
+import type { BenhNhanTiepDon } from '../api/types'
 import {
   AddIcon,
   BaseAlert,
@@ -22,44 +21,39 @@ import {
 import type { BaseColumns } from '../components/common'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
-import { age, dateVN } from '../utils/format'
+import { age, dateVN, gomTheoMa } from '../utils/format'
 
 /**
- * Tiếp đón: tra cứu bệnh nhân trên toàn chuỗi (view TRA_CUU_BENH_NHAN_TOAN_CHUOI qua S0) để dùng lại mã cũ, rồi
- * tạo lượt khám hoặc lượt chữa. Bệnh nhân chưa có hồ sơ ở chi nhánh được chép sang khi tạo lượt.
- * Không tra cứu được toàn chuỗi (mất kết nối S0 / chi nhánh khác) thì tra cứu trong chi nhánh để tiếp đón vẫn làm việc được.
+ * Tiếp đón: tìm hồ sơ tại chi nhánh (mã, họ tên, CCCD, thẻ BHYT, số điện thoại) rồi tạo lượt khám / lượt chữa.
+ * Bệnh nhân từng khám ở chi nhánh khác: nhập đúng số CCCD / thẻ BHYT, backend hỏi hàm tim_ma_benh_nhan ở S0 — chỉ trả mã
+ * cũ và chi nhánh đã lập hồ sơ, không kèm thông tin cá nhân. Chi nhánh lập hồ sơ của mình với mã đó từ giấy tờ bệnh nhân.
  */
 export function TiepDonPage() {
-  const { site, branch, branches } = useSite()
+  const { site, branch } = useSite()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
 
   const search = useQuery({
-    queryKey: ['tra-cuu', site, q],
-    queryFn: () => searchBenhNhanToanChuoi(site, q),
+    queryKey: ['tiep-don', site, q],
+    queryFn: () => tiepDon(site, q),
     enabled: q.trim() !== '',
     retry: false,
   })
-  const cucBo = search.isError
-  const local = useQuery({
-    queryKey: ['tra-cuu-cuc-bo', site, q],
-    queryFn: () => searchBenhNhanCucBo(site, q),
-    enabled: cucBo,
-    retry: false,
-  })
-  const rows = (cucBo ? local.data : search.data) ?? []
-  const coHoSo = useQuery({
-    queryKey: ['co-ho-so', rows.map((r) => r.maBN).join(',')],
-    queryFn: () => getChiNhanhCoHoSo(rows.map((r) => r.maBN)),
-    enabled: rows.length > 0 && !cucBo,
-    retry: false,
-  })
-  const pham = cucBo ? `tại ${branch?.shortName ?? site}` : 'trên toàn chuỗi'
-  const tenCn = (maCn: string) => branches.find((b) => b.maCn === maCn)?.shortName ?? maCn
+  const rows = search.data?.taiChiNhanh ?? []
+  const noiKhac = search.data?.noiKhac ?? []
+  const tenCn = branch?.shortName ?? site
 
-  const columns: BaseColumns<BenhNhanToanChuoi> = [
-    { title: 'Mã BN', dataIndex: 'maBN', width: 90, render: (v: string) => <code>{v}</code> },
+  /** Sang màn Bệnh nhân, mở sẵn form thêm; điền mã cũ (nếu có) và số định danh vừa tra */
+  const lapHoSo = (maBN?: string) => {
+    const p = new URLSearchParams({ them: '1' })
+    if (maBN) p.set('maBN', maBN)
+    if (search.data?.daTraToanChuoi) p.set(/^\d{12}$/.test(q) ? 'cccd' : 'soTheBHYT', q)
+    navigate(`/benh-nhan?${p.toString()}`)
+  }
+
+  const columns: BaseColumns<BenhNhanTiepDon> = [
+    { title: 'Mã BN', dataIndex: 'maBN', width: 120, render: (v: string) => <code>{v}</code> },
     {
       title: 'Họ tên',
       render: (_, p) => (
@@ -84,19 +78,6 @@ export function TiepDonPage() {
       ),
     },
     {
-      title: 'Đã có hồ sơ tại',
-      width: 170,
-      render: (_, p) => {
-        const list = coHoSo.data?.[p.maBN]
-        if (!list) return coHoSo.isLoading ? '…' : p.coTaiChiNhanh ? <BaseTag color="green">{branch?.shortName ?? site}</BaseTag> : '—'
-        return list.map((cn) => (
-          <BaseTag key={cn} color={cn === branch?.maCn ? 'green' : undefined}>
-            {tenCn(cn)}
-          </BaseTag>
-        ))
-      },
-    },
-    {
       title: 'Đang điều trị',
       dataIndex: 'soDotDangDieuTri',
       width: 110,
@@ -118,11 +99,7 @@ export function TiepDonPage() {
               Tạo lượt chữa
             </BaseButton>
           )}
-          <BaseButton
-            size="small"
-            icon={<ProfileIcon />}
-            onClick={() => navigate(p.coTaiChiNhanh ? `/ho-so?maBN=${encodeURIComponent(p.maBN)}` : `/tc-ho-so?maBN=${encodeURIComponent(p.maBN)}`)}
-          >
+          <BaseButton size="small" icon={<ProfileIcon />} onClick={() => navigate(`/ho-so?maBN=${encodeURIComponent(p.maBN)}`)}>
             Hồ sơ
           </BaseButton>
         </BaseSpace>
@@ -134,7 +111,7 @@ export function TiepDonPage() {
     <>
       <PageTitle
         title="Tiếp đón"
-        description="Tra cứu bệnh nhân trên toàn chuỗi để dùng lại mã cũ (không tạo trùng hồ sơ), rồi tạo lượt khám hoặc lượt chữa."
+        description={`Tìm hồ sơ tại ${tenCn}, rồi tạo lượt khám hoặc lượt chữa. Bệnh nhân từng khám ở chi nhánh khác: nhập đúng số CCCD / thẻ BHYT để dùng lại mã cũ.`}
       />
 
       <BaseCard style={{ marginBottom: 16 }}>
@@ -142,33 +119,46 @@ export function TiepDonPage() {
           size="large"
           allowClear
           defaultValue={q}
-          placeholder="Nhập CCCD, số thẻ BHYT, số điện thoại, mã hoặc họ tên…"
-          enterButton="Tra cứu toàn chuỗi"
+          placeholder="Mã, họ tên, số điện thoại — hoặc đúng số CCCD / thẻ BHYT…"
+          enterButton="Tra cứu"
           onSearch={(v) => setParams(v.trim() ? { q: v.trim() } : {})}
           style={{ maxWidth: 680 }}
           aria-label="Từ khoá tra cứu"
         />
         <div className="muted" style={{ marginTop: 8 }}>
-          Khớp đúng CCCD / thẻ BHYT / số điện thoại / mã bệnh nhân, hoặc một phần họ tên. Đọc qua{' '}
-          <code>TRA_CUU_BENH_NHAN_TOAN_CHUOI</code> (chi nhánh → postgres_fdw → S0 → 3 chi nhánh) nên cần cả 4 trạm đang chạy; mất
-          kết nối thì tự tra cứu trong chi nhánh.
+          Họ tên, số điện thoại chỉ tìm trong hồ sơ của chi nhánh. Số CCCD / thẻ BHYT đầy đủ được tra thêm trên toàn chuỗi qua hàm{' '}
+          <code>tim_ma_benh_nhan</code> ở S0 — chỉ trả mã bệnh nhân, không trả họ tên, địa chỉ hay bệnh sử của chi nhánh khác.
         </div>
       </BaseCard>
 
-      {cucBo && (
-        <BaseAlert
-          type="warning"
-          style={{ marginBottom: 12 }}
-          title={`Không tra cứu được toàn chuỗi — đang hiện kết quả ${pham}`}
-          description={`${errorText(search.error)} Bệnh nhân chỉ có hồ sơ ở chi nhánh khác sẽ không hiện ở đây; không thấy thì thêm hồ sơ mới (mã do chi nhánh cấp).`}
-        />
-      )}
-      {local.error && <BaseErrorAlert title={`Không tra cứu được ${pham}`} error={local.error} />}
+      {search.error && <BaseErrorAlert title="Không tra cứu được" error={search.error} />}
+      {search.data?.canhBao && <BaseAlert type="warning" style={{ marginBottom: 12 }} title={search.data.canhBao} />}
 
-      {q && (cucBo ? local.isSuccess : search.isSuccess) && rows.length === 0 && (
+      {gomTheoMa(noiKhac).map(([maBN, chiNhanh]) => (
+        <BaseAlert
+          key={maBN}
+          type="success"
+          style={{ marginBottom: 12 }}
+          title={`Số ${q} đã có mã ${maBN} (có hồ sơ tại chi nhánh ${chiNhanh.join(', ')})`}
+          description={`Lập hồ sơ tại ${tenCn} với mã này — họ tên, ngày sinh, địa chỉ… nhập từ giấy tờ bệnh nhân đưa.`}
+          action={
+            <BaseButton type="primary" icon={<AddIcon />} onClick={() => lapHoSo(maBN)}>
+              Lập hồ sơ với mã này
+            </BaseButton>
+          }
+        />
+      ))}
+
+      {q && search.isSuccess && rows.length === 0 && noiKhac.length === 0 && (
         <BaseCard>
-          <BaseEmpty description={`Không tìm thấy bệnh nhân khớp “${q}” ${pham}.`}>
-            <BaseButton type="primary" icon={<AddIcon />} onClick={() => navigate('/benh-nhan?them=1')}>
+          <BaseEmpty
+            description={
+              search.data.daTraToanChuoi
+                ? `Số “${q}” chưa có ở chi nhánh nào trong chuỗi.`
+                : `Không thấy hồ sơ khớp “${q}” tại ${tenCn}. Bệnh nhân từng khám nơi khác: nhập đúng số CCCD / thẻ BHYT.`
+            }
+          >
+            <BaseButton type="primary" icon={<AddIcon />} onClick={() => lapHoSo()}>
               Thêm bệnh nhân mới
             </BaseButton>
           </BaseEmpty>
@@ -176,22 +166,9 @@ export function TiepDonPage() {
       )}
 
       {rows.length > 0 && (
-        <>
-          {rows.some((p) => !p.coTaiChiNhanh) && (
-            <BaseAlert
-              type="info"
-              style={{ marginBottom: 12 }}
-              title={`Có bệnh nhân chưa có hồ sơ tại ${branch?.shortName ?? site}`}
-              description={`Khi tạo lượt khám, backend chép bản ghi BENH_NHAN (giữ nguyên mã) vào ${site} trong cùng transaction — vì LAN_KHAM.MaBN tham chiếu bảng cục bộ.`}
-            />
-          )}
-          {coHoSo.error && (
-            <BaseAlert type="warning" style={{ marginBottom: 12 }} title="Không đọc được chi nhánh có hồ sơ (S0)" description="Vẫn tạo lượt được." />
-          )}
-          <BaseCard title={`Kết quả tra cứu ${pham} · ${rows.length} bệnh nhân`} styles={{ body: { padding: 0 } }}>
-            <BaseTable<BenhNhanToanChuoi> rowKey="maBN" unit="bệnh nhân" columns={columns} dataSource={rows} scroll={{ x: 1050 }} pagination={false} />
-          </BaseCard>
-        </>
+        <BaseCard title={`Hồ sơ tại ${tenCn} · ${rows.length} bệnh nhân`} styles={{ body: { padding: 0 } }}>
+          <BaseTable<BenhNhanTiepDon> rowKey="maBN" unit="bệnh nhân" columns={columns} dataSource={rows} scroll={{ x: 1050 }} pagination={false} />
+        </BaseCard>
       )}
     </>
   )
