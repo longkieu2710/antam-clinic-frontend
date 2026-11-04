@@ -70,8 +70,8 @@ export function DashboardPage() {
             )}
             {mode === 'HQ' && (
               <li>
-                Máy Trung tâm: danh mục chung và báo cáo toàn chuỗi ở S0; chọn chi nhánh trên thanh tiêu đề để xem dữ liệu của chi nhánh
-                đó — chỉ xem, thêm / sửa / xoá làm ở máy chi nhánh.
+                Máy Trung tâm: danh mục chung và báo cáo toàn chuỗi ở S0; bác sĩ, y tá, bệnh nhân, khoa, thiết bị của cả chuỗi
+                đọc qua view toàn cục (có cột chi nhánh) — chỉ xem, thêm / sửa / xoá làm ở máy chi nhánh.
               </li>
             )}
             <li>Danh mục chung (thuốc, chi nhánh…) luôn ghi ở S0 qua <code>/api/master/**</code>; Logical Replication tự đẩy xuống S1–S3.</li>

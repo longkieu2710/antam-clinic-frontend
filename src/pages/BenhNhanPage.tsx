@@ -34,6 +34,7 @@ import type { BaseColumns } from '../components/common'
 import { useCrudMutations } from '../hooks/useCrudMutations'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
+import { BenhNhanToanChuoi } from './BenhNhanToanChuoi'
 import { age, blankToNull, dateTimeVN, gomTheoMa } from '../utils/format'
 
 interface FormValues {
@@ -58,6 +59,11 @@ const NHOM_MAU = ['A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+
  * Mở từ màn Tiếp đón: ?them=1[&maBN=…][&cccd=… | &soTheBHYT=…] điền sẵn các ô đó.
  */
 export function BenhNhanPage() {
+  const { mode } = useSite()
+  return mode === 'HQ' ? <BenhNhanToanChuoi /> : <BenhNhanChiNhanh />
+}
+
+function BenhNhanChiNhanh() {
   const { site, branch } = useSite()
   const readOnly = useBaseReadOnly()
   const navigate = useNavigate()

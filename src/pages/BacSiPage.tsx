@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
-import { createBacSi, deleteBacSi, getBacSi, getKhoa, updateBacSi } from '../api/endpoints'
+import { createBacSi, deleteBacSi, getBacSi, getBacSiToanChuoi, getKhoa, getKhoaToanChuoi, updateBacSi } from '../api/endpoints'
 import {
   AddIcon,
   BaseButton,
@@ -31,6 +31,7 @@ import { useCrudMutations } from '../hooks/useCrudMutations'
 import type { BacSi, BacSiRequest } from '../api/types'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
+import { useTenChiNhanh } from '../site/useTenChiNhanh'
 import { age, blankToNull } from '../utils/format'
 
 interface FormValues {
@@ -62,7 +63,9 @@ const toDate = (d?: Dayjs | null) => (d ? d.format('YYYY-MM-DD') : null)
  * Xoá bác sĩ đã có lượt → backend chuyển "Ngừng hoạt động" (BR9).
  */
 export function BacSiPage() {
-  const { site, branch } = useSite()
+  const { mode, site, branch } = useSite()
+  const hq = mode === 'HQ'
+  const tenCn = useTenChiNhanh()
   const form = useBaseForm<FormValues>()
 
   const [q, setQ] = useState('')
@@ -70,8 +73,14 @@ export function BacSiPage() {
   const [editing, setEditing] = useState<BacSi | null>(null)
   const [open, setOpen] = useState(false)
 
-  const khoaQuery = useQuery({ queryKey: ['khoa', site], queryFn: () => getKhoa(site) })
-  const listQuery = useQuery({ queryKey: ['bac-si', site, q, khoa], queryFn: () => getBacSi(site, q, khoa) })
+  const khoaQuery = useQuery({
+    queryKey: hq ? ['khoa-toan-chuoi'] : ['khoa', site],
+    queryFn: () => (hq ? getKhoaToanChuoi() : getKhoa(site)),
+  })
+  const listQuery = useQuery({
+    queryKey: hq ? ['bac-si-toan-chuoi', q, khoa] : ['bac-si', site, q, khoa],
+    queryFn: () => (hq ? getBacSiToanChuoi(q, khoa) : getBacSi(site, q, khoa)),
+  })
 
   const crud = useCrudMutations({
     form,
@@ -128,10 +137,11 @@ export function BacSiPage() {
       soDienThoai: (v.soDienThoai ?? []).map((s) => s.trim()).filter(Boolean),
     })
 
-  const khoaOptions = (khoaQuery.data ?? []).map((k) => ({ value: k.maKhoa, label: k.tenKhoa }))
+  const khoaOptions = (khoaQuery.data ?? []).map((k) => ({ value: k.maKhoa, label: hq ? `${k.tenKhoa} · ${tenCn(k.maCn)}` : k.tenKhoa }))
 
   const columns: BaseColumns<BacSi> = [
     { title: 'Mã BS', dataIndex: 'maNV', render: (v: string) => <code>{v}</code>, width: 120 },
+    ...(hq ? [{ title: 'Chi nhánh', dataIndex: 'maCn', width: 110, render: (v: string | null) => <BaseTag>{tenCn(v)}</BaseTag> }] : []),
     {
       title: 'Họ tên',
       render: (_, r) => (
@@ -184,7 +194,11 @@ export function BacSiPage() {
     <>
       <PageTitle
         title="Bác sĩ"
-        description={`Nhân viên loại BS của ${branch?.tenCn ?? site} (NHAN_VIEN ⟶ BAC_SI).`}
+        description={
+          hq
+            ? 'Bác sĩ của cả chuỗi — view toàn cục BAC_SI ⨝ NHAN_VIEN ở S0 (postgres_fdw), chỉ xem.'
+            : `Nhân viên loại BS của ${branch?.tenCn ?? site} (NHAN_VIEN ⟶ BAC_SI).`
+        }
         extra={
           <BaseWritable>
             <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>

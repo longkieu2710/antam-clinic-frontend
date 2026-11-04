@@ -7,6 +7,7 @@ export {
   // Thao tác
   PlusOutlined as AddIcon,
   EditOutlined as EditIcon,
+  ArrowLeftOutlined as ArrowLeftIcon,
   DeleteOutlined as DeleteIcon,
   ReloadOutlined as ReloadIcon,
   SyncOutlined as SyncIcon,

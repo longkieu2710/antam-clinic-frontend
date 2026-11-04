@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
-import { createThietBi, deleteThietBi, getThietBi, updateThietBi } from '../api/endpoints'
+import { createThietBi, deleteThietBi, getThietBi, getThietBiToanChuoi, updateThietBi } from '../api/endpoints'
 import type { ThietBi, ThietBiRequest } from '../api/types'
 import {
   AddIcon,
@@ -29,6 +29,7 @@ import type { BaseColumns } from '../components/common'
 import { useCrudMutations } from '../hooks/useCrudMutations'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
+import { useTenChiNhanh } from '../site/useTenChiNhanh'
 import { blankToNull, dateVN, money } from '../utils/format'
 
 interface FormValues {
@@ -48,13 +49,18 @@ const tinhTrangColor = (v: string | null) =>
 
 /** Thiết bị y tế của chi nhánh đang chọn. Thiết bị đã dùng trong lượt khám/chữa → xoá = chuyển "Ngừng hoạt động" (BR9). */
 export function ThietBiPage() {
-  const { site, branch } = useSite()
+  const { mode, site, branch } = useSite()
+  const hq = mode === 'HQ'
+  const tenCn = useTenChiNhanh()
   const form = useBaseForm<FormValues>()
   const [q, setQ] = useState('')
   const [editing, setEditing] = useState<ThietBi | null>(null)
   const [open, setOpen] = useState(false)
 
-  const listQuery = useQuery({ queryKey: ['thiet-bi', site, q], queryFn: () => getThietBi(site, q) })
+  const listQuery = useQuery({
+    queryKey: hq ? ['thiet-bi-toan-chuoi', q] : ['thiet-bi', site, q],
+    queryFn: () => (hq ? getThietBiToanChuoi(q) : getThietBi(site, q)),
+  })
 
   const crud = useCrudMutations({
     form,
@@ -96,6 +102,7 @@ export function ThietBiPage() {
 
   const columns: BaseColumns<ThietBi> = [
     { title: 'Mã', dataIndex: 'maTB', render: (v: string) => <code>{v}</code>, width: 120 },
+    ...(hq ? [{ title: 'Chi nhánh', dataIndex: 'maCn', width: 110, render: (v: string | null) => <BaseTag>{tenCn(v)}</BaseTag> }] : []),
     {
       title: 'Thiết bị',
       render: (_, r) => (
@@ -137,7 +144,11 @@ export function ThietBiPage() {
     <>
       <PageTitle
         title="Thiết bị"
-        description={`Thiết bị y tế của ${branch?.tenCn ?? site} (THIET_BI). Đổi đơn giá không ảnh hưởng lượt cũ — SU_DUNG_TB lưu đơn giá áp dụng (BR7).`}
+        description={
+          hq
+            ? 'Thiết bị y tế của cả chuỗi — view toàn cục THIET_BI ở S0 (postgres_fdw), chỉ xem.'
+            : `Thiết bị y tế của ${branch?.tenCn ?? site} (THIET_BI). Đổi đơn giá không ảnh hưởng lượt cũ — SU_DUNG_TB lưu đơn giá áp dụng (BR7).`
+        }
         extra={
           <BaseWritable>
             <BaseButton type="primary" icon={<AddIcon />} onClick={() => openForm(null)}>

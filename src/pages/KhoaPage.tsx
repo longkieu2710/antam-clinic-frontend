@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { createKhoa, deleteKhoa, getKhoa, updateKhoa } from '../api/endpoints'
+import { createKhoa, deleteKhoa, getKhoa, getKhoaToanChuoi, updateKhoa } from '../api/endpoints'
 import type { Khoa, KhoaRequest } from '../api/types'
 import {
   AddIcon,
@@ -13,6 +13,7 @@ import {
   BaseInput,
   BaseSpace,
   BaseTable,
+  BaseTag,
   BaseText,
   BaseTextArea,
   BaseWritable,
@@ -22,6 +23,7 @@ import type { BaseColumns } from '../components/common'
 import { useCrudMutations } from '../hooks/useCrudMutations'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
+import { useTenChiNhanh } from '../site/useTenChiNhanh'
 import { blankToNull } from '../utils/format'
 
 interface FormValues {
@@ -32,12 +34,17 @@ interface FormValues {
 
 /** Khoa của chi nhánh đang chọn (KHOA.MaCN = chi nhánh). Khoa còn nhân viên hoặc đã có lượt thì không xoá được. */
 export function KhoaPage() {
-  const { site, branch } = useSite()
+  const { mode, site, branch } = useSite()
+  const hq = mode === 'HQ'
+  const tenCn = useTenChiNhanh()
   const form = useBaseForm<FormValues>()
   const [editing, setEditing] = useState<Khoa | null>(null)
   const [open, setOpen] = useState(false)
 
-  const listQuery = useQuery({ queryKey: ['khoa', site], queryFn: () => getKhoa(site) })
+  const listQuery = useQuery({
+    queryKey: hq ? ['khoa-toan-chuoi'] : ['khoa', site],
+    queryFn: () => (hq ? getKhoaToanChuoi() : getKhoa(site)),
+  })
 
   const crud = useCrudMutations({
     form,
@@ -61,6 +68,7 @@ export function KhoaPage() {
 
   const columns: BaseColumns<Khoa> = [
     { title: 'Mã khoa', dataIndex: 'maKhoa', render: (v: string) => <code>{v}</code>, width: 130 },
+    ...(hq ? [{ title: 'Chi nhánh', dataIndex: 'maCn', width: 110, render: (v: string | null) => <BaseTag>{tenCn(v)}</BaseTag> }] : []),
     {
       title: 'Tên khoa',
       render: (_, r) => (
@@ -98,7 +106,11 @@ export function KhoaPage() {
     <>
       <PageTitle
         title="Khoa"
-        description={`Khoa phòng của ${branch?.tenCn ?? site} (KHOA). Mỗi khoa thuộc đúng 1 chi nhánh; tên khoa không trùng trong chi nhánh.`}
+        description={
+          hq
+            ? 'Khoa phòng của cả chuỗi — view toàn cục KHOA ở S0 (postgres_fdw), chỉ xem.'
+            : `Khoa phòng của ${branch?.tenCn ?? site} (KHOA). Mỗi khoa thuộc đúng 1 chi nhánh; tên khoa không trùng trong chi nhánh.`
+        }
         extra={
           <BaseWritable>
             <BaseButton type="primary" icon={<AddIcon />} onClick={() => openForm(null)}>

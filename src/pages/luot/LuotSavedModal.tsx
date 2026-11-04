@@ -17,7 +17,10 @@ export function LuotSavedModal({ saved, onClose }: Props) {
     ? saved.maCDDT.length > 0
       ? `Mở ${saved.maCDDT.length} đợt điều trị: ${saved.maCDDT.join(', ')}`
       : 'Không phát hiện bệnh — không mở đợt điều trị (BR13)'
-    : `Lần chữa thứ ${saved.lanThu} của đợt ${saved.maCDDT[0]}${saved.ketThucDot ? ' — đợt kết thúc "Đã khỏi" (BR10)' : ''}`
+    : `Lần chữa thứ ${saved.lanThu} của đợt ${saved.maCDDT[0]}`
+  const ghiSau = kham
+    ? 'Kết luận khám và ngày hẹn tái khám: bấm “Xem lượt vừa tạo” → Sửa.'
+    : 'Tình trạng / kết luận sau chữa, số lần chữa cần thiết, hẹn tái khám tiếp: bấm “Xem lượt vừa tạo” → Sửa. “Khỏi” kết thúc đợt (BR10).'
   const go = (path: string) => {
     onClose()
     navigate(path)
@@ -46,6 +49,7 @@ export function LuotSavedModal({ saved, onClose }: Props) {
         subTitle={`${saved.tenBN ?? saved.maBN} · ${detail} · Tổng ${money(saved.tongTien)}`}
         style={{ padding: '16px 0' }}
       />
+      <BaseAlert type="info" title={ghiSau} style={{ marginBottom: 8 }} />
       {saved.canhBao.map((c) => (
         <BaseAlert key={c} type="warning" title={c} style={{ marginBottom: 8 }} />
       ))}

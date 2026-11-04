@@ -11,6 +11,7 @@ import {
   BaseErrorAlert,
   BaseSearchInput,
   BaseSelect,
+  BaseSpace,
   BaseSummaryCell,
   BaseSummaryRow,
   BaseTable,
@@ -92,12 +93,14 @@ export function LuotPage() {
         description={`Các lượt tại ${branch?.tenCn ?? site} — bấm một dòng để xem chẩn đoán, y tá hỗ trợ, chi phí; xoá được lượt nhập nhầm trong tháng.`}
         extra={
           <BaseWritable>
-            <BaseButton icon={<RetweetIcon />} onClick={() => navigate('/luot-chua-moi')}>
-              Lượt chữa
-            </BaseButton>
-            <BaseButton type="primary" icon={<AddIcon />} onClick={() => navigate('/luot-kham-moi')}>
-              Lượt khám
-            </BaseButton>
+            <BaseSpace>
+              <BaseButton icon={<RetweetIcon />} onClick={() => navigate('/luot-chua-moi')}>
+                Lượt chữa
+              </BaseButton>
+              <BaseButton type="primary" icon={<AddIcon />} onClick={() => navigate('/luot-kham-moi')}>
+                Lượt khám
+              </BaseButton>
+            </BaseSpace>
           </BaseWritable>
         }
       />

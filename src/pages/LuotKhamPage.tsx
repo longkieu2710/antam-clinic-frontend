@@ -11,7 +11,6 @@ import {
   BaseCard,
   BaseCheckableTags,
   BaseCol,
-  BaseDatePicker,
   BaseDateTimePicker,
   BaseDescriptions,
   BaseErrorAlert,
@@ -56,8 +55,6 @@ interface FormValues extends ChiTietFormValues {
   thoiGian: Dayjs
   lyDoKham?: string
   trieuChung?: string
-  ketLuanKham?: string
-  ngayHenTaiKham?: Dayjs | null
   ghiChu?: string
   chanDoan?: { maBenh?: string; mucDo: ChanDoanInput['mucDo']; soLanChuaCanThiet: number }[]
 }
@@ -132,8 +129,6 @@ export function LuotKhamPage() {
       thoiGian: toLocalDateTime(v.thoiGian),
       lyDoKham: blankToNull(v.lyDoKham),
       trieuChung: blankToNull(v.trieuChung),
-      ketLuanKham: blankToNull(v.ketLuanKham),
-      ngayHenTaiKham: v.ngayHenTaiKham ? v.ngayHenTaiKham.format('YYYY-MM-DD') : null,
       ghiChu: blankToNull(v.ghiChu),
       chanDoan: (v.chanDoan ?? []).filter((c) => c?.maBenh).map((c) => ({ ...c, maBenh: c.maBenh! })),
       ...toChiTietInput(v),
@@ -276,28 +271,6 @@ export function LuotKhamPage() {
                 <BaseCol xs={24}>
                   <BaseFormItem name="trieuChung" label="Triệu chứng">
                     <BaseTextArea rows={2} maxLength={1000} />
-                  </BaseFormItem>
-                </BaseCol>
-                <BaseCol xs={24} md={12}>
-                  <BaseFormItem name="ketLuanKham" label="Kết luận khám" extra="Bỏ trống và không chẩn đoán → ghi “Không phát hiện bệnh”">
-                    <BaseInput maxLength={500} placeholder="VD: Viêm họng cấp" />
-                  </BaseFormItem>
-                </BaseCol>
-                <BaseCol xs={24} md={12}>
-                  <BaseFormItem
-                    name="ngayHenTaiKham"
-                    label="Ngày hẹn tái khám"
-                    dependencies={['thoiGian']}
-                    rules={[
-                      ({ getFieldValue }) => ({
-                        validator: (_, v: Dayjs | null) =>
-                          !v || v.isAfter(getFieldValue('thoiGian'), 'day')
-                            ? Promise.resolve()
-                            : Promise.reject(new Error('Ngày hẹn phải sau ngày khám')),
-                      }),
-                    ]}
-                  >
-                    <BaseDatePicker />
                   </BaseFormItem>
                 </BaseCol>
               </BaseRow>

@@ -12,6 +12,7 @@ import {
   BaseErrorAlert,
   BaseProgress,
   BaseRow,
+  BaseSpace,
   BaseStatistic,
   BaseTable,
   BaseTag,
@@ -70,12 +71,14 @@ export function TongQuanChiNhanhPage() {
         description={`${branch?.tenCn ?? site}${branch?.diaChi ? ` · ${branch.diaChi}` : ''} — số liệu đọc ở trạm ${site}.`}
         extra={
           <BaseWritable>
-            <BaseButton icon={<SearchIcon />} onClick={() => navigate('/tiep-don')}>
-              Tiếp đón
-            </BaseButton>
-            <BaseButton type="primary" icon={<FileAddIcon />} onClick={() => navigate('/luot-kham-moi')}>
-              Lượt khám
-            </BaseButton>
+            <BaseSpace>
+              <BaseButton icon={<SearchIcon />} onClick={() => navigate('/tiep-don')}>
+                Tiếp đón
+              </BaseButton>
+              <BaseButton type="primary" icon={<FileAddIcon />} onClick={() => navigate('/luot-kham-moi')}>
+                Lượt khám
+              </BaseButton>
+            </BaseSpace>
           </BaseWritable>
         }
       />

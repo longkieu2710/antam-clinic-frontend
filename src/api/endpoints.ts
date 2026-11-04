@@ -26,6 +26,8 @@ import type {
   LuotChuaRequest,
   LuotKhamRequest,
   SiteStatus,
+  SuaLuotChuaRequest,
+  SuaLuotKhamRequest,
   TaoLuot,
   ThietBi,
   ThietBiRequest,
@@ -150,8 +152,12 @@ export const deleteLuot = (site: string, maLuot: string) =>
   api<DeleteResult>(`/api/luot/${encodeURIComponent(maLuot)}`, { site, method: 'DELETE' })
 export const createLuotKham = (site: string, body: LuotKhamRequest) =>
   api<TaoLuot>('/api/luot-kham', { site, method: 'POST', body })
+export const suaLuotKham = (site: string, maLuot: string, body: SuaLuotKhamRequest) =>
+  api<LuotChiTiet>(`/api/luot-kham/${encodeURIComponent(maLuot)}`, { site, method: 'PUT', body })
 export const createLuotChua = (site: string, body: LuotChuaRequest) =>
   api<TaoLuot>('/api/luot-chua', { site, method: 'POST', body })
+export const suaLuotChua = (site: string, maLuot: string, body: SuaLuotChuaRequest) =>
+  api<LuotChiTiet>(`/api/luot-chua/${encodeURIComponent(maLuot)}`, { site, method: 'PUT', body })
 export const getDotDangDieuTri = (site: string, maBN: string) =>
   api<DotDieuTri[]>(`/api/benh-nhan/${encodeURIComponent(maBN)}/dot-dang-dieu-tri`, { site })
 export const ngungDieuTri = (site: string, maCDDT: string) =>
@@ -163,8 +169,15 @@ export const getBenhReplica = (site: string) => api<Benh[]>('/api/benh', { site 
 export const getDichVuReplica = (site: string) => api<DichVu[]>('/api/dich-vu', { site })
 
 // ---- Toàn chuỗi (S0)
+// ---- Trung tâm xem toàn chuỗi (view toàn cục ở S0, mỗi dòng có maCn)
+export const getBacSiToanChuoi = (q?: string, khoa?: string) => api<BacSi[]>('/api/hq/bac-si', { query: { q, khoa } })
+export const getYTaToanChuoi = (q?: string, khoa?: string) => api<YTa[]>('/api/hq/y-ta', { query: { q, khoa } })
+export const getKhoaToanChuoi = () => api<Khoa[]>('/api/hq/khoa')
+export const getThietBiToanChuoi = (q?: string) => api<ThietBi[]>('/api/hq/thiet-bi', { query: { q } })
 export const getBenhNhanToanChuoiHq = (q?: string) => api<BenhNhanTomTat[]>('/api/hq/benh-nhan', { query: { q } })
 /** → { maBN: ['CN1', 'CN3'] } */
+export const getChiNhanhCoHoSo = (ma: string[]) =>
+  api<Record<string, string[]>>('/api/hq/benh-nhan/chi-nhanh', { query: { ma: ma.join(',') } })
 export const getHoSoToanChuoi = (maBN: string) =>
   api<HoSoBenhNhan>(`/api/hq/benh-nhan/${encodeURIComponent(maBN)}/ho-so`)
 export const getDoanhThuToanChuoi = (tu: string, den: string) =>
