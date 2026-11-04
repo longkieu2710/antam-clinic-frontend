@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { createBenhNhan, deleteBenhNhan, getBenhNhan, searchBenhNhanToanChuoi, updateBenhNhan } from '../api/endpoints'
-import type { BenhNhan, BenhNhanRequest, BenhNhanToanChuoi } from '../api/types'
+import { createBenhNhan, deleteBenhNhan, getBenhNhan, tiepDon, updateBenhNhan } from '../api/endpoints'
+import type { BenhNhan, BenhNhanRequest } from '../api/types'
 import {
   AddIcon,
   BaseAlert,
@@ -25,14 +25,17 @@ import {
   BaseTag,
   BaseText,
   BaseTextArea,
+  BaseWritable,
   ProfileIcon,
   useBaseForm,
+  useBaseReadOnly,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
 import { useCrudMutations } from '../hooks/useCrudMutations'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
-import { age, blankToNull, dateTimeVN, dateVN } from '../utils/format'
+import { BenhNhanToanChuoi } from './BenhNhanToanChuoi'
+import { age, blankToNull, dateTimeVN, gomTheoMa } from '../utils/format'
 
 interface FormValues {
   maBN?: string
@@ -51,11 +54,18 @@ const GIOI_TINH = ['Nam', 'Nữ', 'Khác']
 const NHOM_MAU = ['A', 'B', 'AB', 'O', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 /**
- * Bệnh nhân của chi nhánh đang chọn. Mã bệnh nhân là định danh chung toàn chuỗi:
- * bệnh nhân đã khám ở chi nhánh khác → tra cứu toàn chuỗi (postgres_fdw qua S0) rồi dùng lại mã cũ.
+ * Bệnh nhân của chi nhánh đang chọn. Mã bệnh nhân là định danh chung toàn chuỗi: bệnh nhân đã khám ở chi nhánh khác →
+ * nhập đúng số CCCD / thẻ BHYT, S0 chỉ trả mã cũ (không kèm thông tin cá nhân), thông tin còn lại nhập từ giấy tờ.
+ * Mở từ màn Tiếp đón: ?them=1[&maBN=…][&cccd=… | &soTheBHYT=…] điền sẵn các ô đó.
  */
 export function BenhNhanPage() {
+  const { mode } = useSite()
+  return mode === 'HQ' ? <BenhNhanToanChuoi /> : <BenhNhanChiNhanh />
+}
+
+function BenhNhanChiNhanh() {
   const { site, branch } = useSite()
+  const readOnly = useBaseReadOnly()
   const navigate = useNavigate()
   const form = useBaseForm<FormValues>()
 
@@ -69,11 +79,12 @@ export function BenhNhanPage() {
 
   const listQuery = useQuery({ queryKey: ['benh-nhan', site, q], queryFn: () => getBenhNhan(site, q) })
   const lookupQuery = useQuery({
-    queryKey: ['benh-nhan-toan-chuoi', site, lookup],
-    queryFn: () => searchBenhNhanToanChuoi(site, lookup),
+    queryKey: ['tiep-don', site, lookup],
+    queryFn: () => tiepDon(site, lookup),
     enabled: open && !editing && lookup.trim() !== '',
     retry: false,
   })
+  const lookupLocal = (lookupQuery.data?.taiChiNhanh ?? []).filter((b) => b.cccd === lookup || b.soTheBHYT === lookup)
 
   const crud = useCrudMutations({
     form,
@@ -97,9 +108,14 @@ export function BenhNhanPage() {
   }
 
   useEffect(() => {
-    if (params.get('them') === '1') {
+    if (params.get('them') === '1' && !readOnly) {
       setTuTiepDon(true)
       openCreate()
+      form.setFieldsValue({
+        maBN: params.get('maBN') ?? undefined,
+        cccd: params.get('cccd') ?? undefined,
+        soTheBHYT: params.get('soTheBHYT') ?? undefined,
+      })
       setParams({}, { replace: true })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ xử lý tham số ?them=1 khi vào trang
@@ -125,17 +141,9 @@ export function BenhNhanPage() {
   }
 
   /** Lấy thông tin bệnh nhân đã đăng ký ở chi nhánh khác, giữ nguyên mã để định danh toàn chuỗi. */
-  const fillFromChain = (x: BenhNhanToanChuoi) =>
-    form.setFieldsValue({
-      maBN: x.maBN,
-      hoTen: x.hoTen,
-      gioiTinh: x.gioiTinh ?? undefined,
-      ngaySinh: x.ngaySinh ? dayjs(x.ngaySinh) : null,
-      cccd: x.cccd ?? undefined,
-      soDienThoai: x.soDienThoai ?? undefined,
-      diaChi: x.diaChi ?? undefined,
-      soTheBHYT: x.soTheBHYT ?? undefined,
-    })
+  /** Dùng lại mã ở chi nhánh khác: chỉ có mã và số vừa nhập — thông tin cá nhân nhập từ giấy tờ bệnh nhân đưa */
+  const dungMa = (maBN: string) =>
+    form.setFieldsValue({ maBN, ...(/^\d{12}$/.test(lookup) ? { cccd: lookup } : { soTheBHYT: lookup }) })
 
   const submit = (v: FormValues) =>
     crud.submit({
@@ -210,37 +218,20 @@ export function BenhNhanPage() {
     },
   ]
 
-  const lookupColumns: BaseColumns<BenhNhanToanChuoi> = [
-    { title: 'Mã', dataIndex: 'maBN', render: (v: string) => <code>{v}</code>, width: 70 },
-    { title: 'Họ tên', dataIndex: 'hoTen', render: (v: string, r) => <>{v} <span className="muted">{dateVN(r.ngaySinh)}</span></> },
-    { title: 'CCCD', dataIndex: 'cccd', render: (v: string | null) => v ?? '—' },
-    {
-      title: '',
-      key: 'use',
-      align: 'right',
-      render: (_, r) =>
-        r.coTaiChiNhanh ? (
-          <BaseTag>Đã có ở chi nhánh này</BaseTag>
-        ) : (
-          <BaseButton size="small" onClick={() => fillFromChain(r)}>
-            Dùng thông tin này
-          </BaseButton>
-        ),
-    },
-  ]
-
   return (
     <>
       <PageTitle
         title="Bệnh nhân"
         description={`Hồ sơ bệnh nhân đăng ký tại ${branch?.tenCn ?? site} (BENH_NHAN). Mã bệnh nhân dùng chung toàn chuỗi.`}
         extra={
-          <BaseButton type="primary" icon={<AddIcon />} onClick={() => {
-            setTuTiepDon(false)
-            openCreate()
-          }}>
-            Thêm bệnh nhân
-          </BaseButton>
+          <BaseWritable>
+            <BaseButton type="primary" icon={<AddIcon />} onClick={() => {
+              setTuTiepDon(false)
+              openCreate()
+            }}>
+              Thêm bệnh nhân
+            </BaseButton>
+          </BaseWritable>
         }
       />
 
@@ -272,23 +263,34 @@ export function BenhNhanPage() {
         notice={
           !editing && (
             <>
-              <BaseDivider style={{ marginTop: 0 }}>Tra cứu toàn chuỗi · TRA_CUU_BENH_NHAN_TOAN_CHUOI</BaseDivider>
+              <BaseDivider style={{ marginTop: 0 }}>Đã có mã ở chi nhánh khác? Nhập đúng số CCCD / thẻ BHYT</BaseDivider>
               <div className="toolbar">
-                <BaseSearchInput placeholder="CCCD / thẻ BHYT / số điện thoại / họ tên…" onSearch={setLookup} enterButton="Tra cứu" />
+                <BaseSearchInput placeholder="Số CCCD (12 số) hoặc số thẻ BHYT trên giấy tờ…" onSearch={(v) => setLookup(v.trim())} enterButton="Tra mã" />
               </div>
-              {lookupQuery.error && <BaseErrorAlert title="Không tra cứu được toàn chuỗi" error={lookupQuery.error} />}
-              {lookup.trim() !== '' && lookupQuery.data && (
-                lookupQuery.data.length === 0 ? (
-                  <BaseAlert type="info" title="Chưa có bệnh nhân này ở chi nhánh nào — nhập thông tin mới bên dưới." />
-                ) : (
-                  <BaseTable<BenhNhanToanChuoi>
-                    rowKey="maBN"
-                    size="small"
-                    columns={lookupColumns}
-                    dataSource={lookupQuery.data}
-                    pagination={false}
+              {lookupQuery.error && <BaseErrorAlert title="Không tra cứu được" error={lookupQuery.error} />}
+              {lookupQuery.data?.canhBao && <BaseAlert type="warning" title={lookupQuery.data.canhBao} style={{ marginBottom: 8 }} />}
+              {lookup !== '' && lookupQuery.data && (
+                lookupLocal.length > 0 ? (
+                  <BaseAlert
+                    type="warning"
                     style={{ marginBottom: 16 }}
+                    title={`Đã có hồ sơ tại chi nhánh này: ${lookupLocal.map((b) => `${b.maBN} · ${b.hoTen}`).join(', ')}`}
                   />
+                ) : lookupQuery.data.noiKhac.length > 0 ? (
+                  gomTheoMa(lookupQuery.data.noiKhac).map(([maBN, chiNhanh]) => (
+                    <BaseAlert
+                      key={maBN}
+                      type="success"
+                      style={{ marginBottom: 16 }}
+                      title={`Số này đã có mã ${maBN} (có hồ sơ tại chi nhánh ${chiNhanh.join(', ')})`}
+                      description="Chỉ biết mã — họ tên, ngày sinh, địa chỉ… nhập từ giấy tờ bệnh nhân đưa."
+                      action={<BaseButton size="small" onClick={() => dungMa(maBN)}>Dùng mã này</BaseButton>}
+                    />
+                  ))
+                ) : lookupQuery.data.daTraToanChuoi ? (
+                  <BaseAlert type="info" style={{ marginBottom: 16 }} title="Chưa có trong chuỗi — để trống mã để hệ thống cấp mã mới." />
+                ) : (
+                  <BaseAlert type="info" style={{ marginBottom: 16 }} title="Nhập đúng số CCCD hoặc số thẻ BHYT để tra trên toàn chuỗi." />
                 )
               )}
             </>
@@ -303,9 +305,9 @@ export function BenhNhanPage() {
             <BaseFormItem
               label="Mã bệnh nhân"
               name="maBN"
-              extra={editing ? undefined : 'Để trống để hệ thống tự sinh mã không trùng toàn chuỗi'}
+              extra={editing ? undefined : `Để trống để tự sinh BN-${branch?.maCn ?? 'CN'}-0001… — mã mang mã chi nhánh nên không trùng toàn chuỗi, sinh được cả khi mất kết nối Trung tâm`}
             >
-              <BaseInput disabled={!!editing} placeholder="BN.." maxLength={20} />
+              <BaseInput disabled={!!editing} placeholder={`BN-${branch?.maCn ?? 'CN'}-…`} maxLength={20} />
             </BaseFormItem>
           </BaseCol>
           <BaseCol xs={24} md={12}>

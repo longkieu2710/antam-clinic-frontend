@@ -12,6 +12,18 @@ export interface ChiNhanh {
   inDatabase: boolean
 }
 
+/** Bản triển khai đang chạy (APP_MODE của backend) — cùng một source cho mọi cơ sở */
+export type AppMode = 'ALL' | 'BRANCH' | 'HQ'
+
+export interface AppModeInfo {
+  /** ALL: một bản cho mọi trạm · BRANCH: bản đặt tại một cơ sở · HQ: bản Trung tâm */
+  mode: AppMode
+  /** Trạm của bản chi nhánh; null ở chế độ khác */
+  localSite: string | null
+  hubSite: string
+  branchSites: string[]
+}
+
 export interface SiteStatus {
   site: string
   role: 'HUB' | 'BRANCH'
@@ -57,6 +69,8 @@ export interface BacSi {
   soChungChiHanhNghe: string | null
   soDienThoai: string[]
   soLuot: number
+  /** chi nhánh của khoa — để phân biệt khi Trung tâm xem toàn chuỗi */
+  maCn: string | null
 }
 
 export interface BacSiRequest {
@@ -119,6 +133,8 @@ export interface YTa {
   soChungChiHanhNghe: string | null
   soDienThoai: string[]
   soLanHoTro: number
+  /** chi nhánh của khoa — để phân biệt khi Trung tâm xem toàn chuỗi */
+  maCn: string | null
 }
 
 export interface YTaRequest {
@@ -167,8 +183,8 @@ export interface BenhNhanRequest {
   tienSuDiUng?: string | null
 }
 
-/** Kết quả tra cứu toàn chuỗi (view TRA_CUU_BENH_NHAN_TOAN_CHUOI qua postgres_fdw) */
-export interface BenhNhanToanChuoi {
+/** Bệnh nhân có hồ sơ tại chi nhánh, khi tiếp đón */
+export interface BenhNhanTiepDon {
   maBN: string
   hoTen: string
   ngaySinh: string | null
@@ -177,10 +193,24 @@ export interface BenhNhanToanChuoi {
   soDienThoai: string | null
   soTheBHYT: string | null
   diaChi: string | null
-  /** đã có hồ sơ ở chi nhánh đang chọn */
-  coTaiChiNhanh: boolean
-  /** số đợt "Đang điều trị" tại chi nhánh đang chọn (> 0 thì tạo được lượt chữa) */
+  /** số đợt "Đang điều trị" tại chi nhánh (> 0 thì tạo được lượt chữa) */
   soDotDangDieuTri: number
+}
+
+/** Hàm tim_ma_benh_nhan ở S0: số CCCD / thẻ BHYT đã có mã ở chi nhánh nào — không kèm thông tin cá nhân */
+export interface ChiMucBenhNhan {
+  maBN: string
+  maCn: string
+  ketNoi: boolean
+}
+
+/** GET /api/benh-nhan/tiep-don */
+export interface TiepDon {
+  taiChiNhanh: BenhNhanTiepDon[]
+  /** chỉ khi từ khoá là số CCCD / thẻ BHYT đầy đủ mà chi nhánh chưa có hồ sơ */
+  noiKhac: ChiMucBenhNhan[]
+  daTraToanChuoi: boolean
+  canhBao: string | null
 }
 
 export interface ThietBi {
@@ -449,6 +479,11 @@ export interface LuotChiTiet {
   chiPhi: ChiPhi[]
   xoaDuoc: boolean
   lyDoKhongXoa: string | null
+  /** khám: các lượt chữa của những đợt mở từ lượt này, theo thời gian */
+  luotChua: Luot[]
+  /** khám: sửa được kết luận / hẹn tái khám — khoá khi có đợt đã khỏi hoặc ngừng điều trị */
+  suaDuoc: boolean
+  lyDoKhongSua: string | null
 }
 
 export interface ChanDoanInput {
@@ -494,21 +529,34 @@ export interface LuotKhamRequest extends ChiTietLuotInput {
   thoiGian: string
   lyDoKham: string | null
   trieuChung: string | null
-  ketLuanKham: string | null
-  ngayHenTaiKham: string | null
   ghiChu: string | null
   chanDoan: ChanDoanInput[]
+}
+
+/** PUT /api/luot-kham/{maLuot} — kết luận và hẹn tái khám nhập khi sửa lượt khám, không nhập lúc tạo */
+export interface SuaLuotKhamRequest {
+  /** bỏ trống = tên các bệnh đã chẩn đoán, hoặc "Không phát hiện bệnh" */
+  ketLuanKham: string | null
+  /** yyyy-MM-dd, sau ngày khám */
+  ngayHenTaiKham: string | null
 }
 
 export interface LuotChuaRequest extends ChiTietLuotInput {
   maCDDT: string
   thoiGian: string
   hinhThuc: string[]
-  ketLuanSauChua: string | null
-  tinhTrangSauChua: string
-  soLanChuaCanThiet: number | null
-  ngayHenTaiKham: string | null
   ghiChu: string | null
+}
+
+/** Kết quả lần chữa, nhập khi sửa lượt chữa. */
+export interface SuaLuotChuaRequest {
+  /** một trong TINH_TRANG; "Khỏi" kết thúc đợt (BR10) — chỉ ở lần chữa cuối, lượt trong tháng hiện tại */
+  tinhTrangSauChua: string | null
+  ketLuanSauChua: string | null
+  /** số lần chữa dự kiến của đợt; null = giữ nguyên */
+  soLanChuaCanThiet: number | null
+  /** yyyy-MM-dd, sau ngày chữa; bỏ qua khi "Khỏi" */
+  ngayHenTaiKham: string | null
 }
 
 export interface TaoLuot {
@@ -518,8 +566,6 @@ export interface TaoLuot {
   tenBN: string | null
   maCDDT: string[]
   lanThu: number | null
-  ketThucDot: boolean
-  daChepBenhNhan: boolean
   tongTien: number
   canhBao: string[]
 }

@@ -12,9 +12,11 @@ import {
   BaseErrorAlert,
   BaseProgress,
   BaseRow,
+  BaseSpace,
   BaseStatistic,
   BaseTable,
   BaseTag,
+  BaseWritable,
   FileAddIcon,
   RetweetIcon,
   SearchIcon,
@@ -68,14 +70,16 @@ export function TongQuanChiNhanhPage() {
         title="Tổng quan chi nhánh"
         description={`${branch?.tenCn ?? site}${branch?.diaChi ? ` · ${branch.diaChi}` : ''} — số liệu đọc ở trạm ${site}.`}
         extra={
-          <>
-            <BaseButton icon={<SearchIcon />} onClick={() => navigate('/tiep-don')}>
-              Tiếp đón
-            </BaseButton>
-            <BaseButton type="primary" icon={<FileAddIcon />} onClick={() => navigate('/luot-kham-moi')}>
-              Lượt khám
-            </BaseButton>
-          </>
+          <BaseWritable>
+            <BaseSpace>
+              <BaseButton icon={<SearchIcon />} onClick={() => navigate('/tiep-don')}>
+                Tiếp đón
+              </BaseButton>
+              <BaseButton type="primary" icon={<FileAddIcon />} onClick={() => navigate('/luot-kham-moi')}>
+                Lượt khám
+              </BaseButton>
+            </BaseSpace>
+          </BaseWritable>
         }
       />
 
@@ -141,9 +145,11 @@ export function TongQuanChiNhanhPage() {
                     </div>
                     <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div>{dateVN(x.ngayHenTaiKham)}</div>
-                      <Link to={`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`}>
-                        <RetweetIcon /> Tạo lượt chữa
-                      </Link>
+                      <BaseWritable>
+                        <Link to={`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`}>
+                          <RetweetIcon /> Tạo lượt chữa
+                        </Link>
+                      </BaseWritable>
                     </div>
                   </li>
                 ))}

@@ -11,20 +11,16 @@ import {
   BaseCard,
   BaseCheckableTags,
   BaseCol,
-  BaseDatePicker,
   BaseDateTimePicker,
   BaseDeleteButton,
   BaseErrorAlert,
   BaseForm,
   BaseFormItem,
   BaseInput,
-  BaseNumberInput,
   BaseRow,
-  BaseSegmented,
   BaseSelect,
   BaseTable,
   BaseTag,
-  BaseTextArea,
   LockIcon,
   useBaseForm,
   useBaseWatch,
@@ -40,12 +36,9 @@ import { LuotSummaryCard } from './luot/LuotSummaryCard'
 import {
   applyFieldErrors,
   HINH_THUC,
-  KHOI,
   LOAI_KHAM_BENH,
   LUOT_QUERY_KEYS,
-  THUONG_DOT_KHOI,
   THUONG_HO_TRO,
-  TINH_TRANG,
   maLuotPreview,
   tinhTien,
   toChiTietInput,
@@ -57,10 +50,6 @@ import { useLuotCatalogs } from './luot/useLuotCatalogs'
 interface FormValues extends ChiTietFormValues {
   thoiGian: Dayjs
   hinhThuc?: string[]
-  ketLuanSauChua?: string
-  tinhTrangSauChua: string
-  soLanChuaCanThiet?: number
-  ngayHenTaiKham?: Dayjs | null
   ghiChu?: string
 }
 
@@ -72,7 +61,8 @@ const now5 = () => {
 /**
  * Tạo lượt chữa: lần tái khám / điều trị tiếp theo của một đợt đang mở.
  * Bác sĩ, khoa cố định theo lần khám mở đợt (BR2); thời gian phải sau lượt gần nhất của đợt (BR3);
- * "Khỏi" kết thúc đợt (BR10); lần chữa trong đợt không tính tiền khám (BR11).
+ * lần chữa trong đợt không tính tiền khám (BR11). Kết quả lần chữa (tình trạng — "Khỏi" kết thúc đợt, BR10 —, kết luận,
+ * số lần chữa cần thiết, hẹn tái khám) ghi sau, ở nút Sửa của chi tiết lượt.
  */
 export function LuotChuaPage() {
   const { site, branch } = useSite()
@@ -107,13 +97,11 @@ export function LuotChuaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi danh sách đợt đổi
   }, [dots.data])
 
-  const reset = (d?: DotDieuTri) => {
+  const reset = () => {
     form.resetFields()
     form.setFieldsValue({
       thoiGian: now5(),
       hinhThuc: [],
-      tinhTrangSauChua: 'Đỡ',
-      soLanChuaCanThiet: d?.soLanChuaCanThiet ?? 1,
       yTa: [],
       dichVu: [],
       thuoc: [],
@@ -121,20 +109,18 @@ export function LuotChuaPage() {
     })
   }
   useEffect(() => {
-    reset(dot)
+    reset()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- khởi tạo lại khi chọn đợt khác
   }, [dot?.maCDDT, site])
 
   const values = (useBaseWatch([], form) ?? {}) as Partial<FormValues>
-  const khoi = values.tinhTrangSauChua === KHOI
 
   const save = useMutation({
     mutationFn: (body: LuotChuaRequest) => createLuotChua(site, body),
     onSuccess: (r) => {
       setSaved(r)
       LUOT_QUERY_KEYS.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }))
-      if (r.ketThucDot) setQuery(maBN)
-      else reset(dot)
+      reset()
     },
     onError: (e) => applyFieldErrors(form, e),
   })
@@ -154,10 +140,6 @@ export function LuotChuaPage() {
       maCDDT: dot!.maCDDT,
       thoiGian: toLocalDateTime(v.thoiGian),
       hinhThuc: v.hinhThuc ?? [],
-      ketLuanSauChua: blankToNull(v.ketLuanSauChua),
-      tinhTrangSauChua: v.tinhTrangSauChua,
-      soLanChuaCanThiet: v.soLanChuaCanThiet ?? null,
-      ngayHenTaiKham: !khoi && v.ngayHenTaiKham ? v.ngayHenTaiKham.format('YYYY-MM-DD') : null,
       ghiChu: blankToNull(v.ghiChu),
       ...toChiTietInput(v),
     })
@@ -173,7 +155,7 @@ export function LuotChuaPage() {
   const tien = tinhTien(values, catalogs)
   const lanThu = dot ? dot.soLanDaChua + 1 : 0
   const soYTa = (values.yTa ?? []).length
-  const soLanDuKien = values.soLanChuaCanThiet ?? dot?.soLanChuaCanThiet ?? 1
+  const datDuKien = !!dot && lanThu >= (dot.soLanChuaCanThiet ?? 1)
 
   const dotColumns: BaseColumns<DotDieuTri> = [
     {
@@ -327,52 +309,16 @@ export function LuotChuaPage() {
                         <BaseCheckableTags options={HINH_THUC.map((h) => ({ value: h, label: h }))} />
                       </BaseFormItem>
                     </BaseCol>
-                    <BaseCol xs={24}>
-                      <BaseFormItem name="ketLuanSauChua" label="Kết luận sau chữa">
-                        <BaseTextArea rows={2} maxLength={1000} />
-                      </BaseFormItem>
-                    </BaseCol>
-                    <BaseCol xs={24} md={12}>
-                      <BaseFormItem name="tinhTrangSauChua" label="Tình trạng sau chữa" extra="Chọn “Khỏi” để kết thúc đợt (BR10)" rules={[{ required: true }]}>
-                        <BaseSegmented options={[...TINH_TRANG]} />
-                      </BaseFormItem>
-                    </BaseCol>
-                    <BaseCol xs={12} md={6}>
-                      <BaseFormItem name="soLanChuaCanThiet" label="Số lần chữa cần thiết" extra={`Bác sĩ được điều chỉnh · hiện ${dot.soLanChuaCanThiet ?? '?'}`}>
-                        <BaseNumberInput min={1} precision={0} />
-                      </BaseFormItem>
-                    </BaseCol>
-                    <BaseCol xs={12} md={6}>
-                      <BaseFormItem
-                        name="ngayHenTaiKham"
-                        label="Hẹn tái khám tiếp"
-                        dependencies={['thoiGian']}
-                        rules={[
-                          ({ getFieldValue }) => ({
-                            validator: (_, v: Dayjs | null) =>
-                              khoi || !v || v.isAfter(getFieldValue('thoiGian'), 'day')
-                                ? Promise.resolve()
-                                : Promise.reject(new Error('Phải sau ngày chữa')),
-                          }),
-                        ]}
-                      >
-                        <BaseDatePicker disabled={khoi} />
-                      </BaseFormItem>
-                    </BaseCol>
                   </BaseRow>
-                  {khoi ? (
-                    <BaseAlert
-                      type="success"
-                      title="Lần chữa này kết thúc đợt điều trị"
-                      description={`Đợt chuyển “Đã khỏi”, NgayKetThuc = thời gian lượt. ${dot.tenBS ?? dot.maBS} được +${money(THUONG_DOT_KHOI)} vào lương tháng ${(values.thoiGian ?? dayjs()).format('MM/YYYY')} (F3).`}
-                    />
-                  ) : lanThu >= soLanDuKien ? (
-                    <BaseAlert
-                      type="warning"
-                      title="Đã đạt số lần chữa dự kiến nhưng chưa khỏi"
-                      description="Đợt chỉ kết thúc khi kết luận “Khỏi” — cân nhắc tăng “Số lần chữa cần thiết”."
-                    />
-                  ) : null}
+                  <BaseAlert
+                    type={datDuKien ? 'warning' : 'info'}
+                    title={
+                      datDuKien
+                        ? `Lần chữa này đạt số lần chữa dự kiến (${dot.soLanChuaCanThiet ?? 1} lần)`
+                        : 'Kết quả lần chữa ghi sau khi chữa'
+                    }
+                    description="Tình trạng sau chữa, kết luận, số lần chữa cần thiết và hẹn tái khám tiếp: sau khi lưu, mở chi tiết lượt → Sửa. Chọn “Khỏi” ở đó để kết thúc đợt (BR10)."
+                  />
                   {dot.quaHan && (
                     <BaseAlert
                       type="warning"
@@ -422,14 +368,14 @@ export function LuotChuaPage() {
                     ['Đợt', dot.tenBenh],
                     ['Lần chữa thứ', lanThu],
                     ['Y tá hỗ trợ', soYTa],
-                    ['Kết thúc đợt', khoi ? 'Có — Đã khỏi' : 'Chưa'],
+                    ['Số lần dự kiến', dot.soLanChuaCanThiet ?? '?'],
                   ]
                 : []
             }
             tien={tien}
             actions={
               <>
-                <BaseButton onClick={() => reset(dot)} disabled={!dot}>
+                <BaseButton onClick={reset} disabled={!dot}>
                   Làm lại
                 </BaseButton>
                 <BaseButton type="primary" htmlType="submit" loading={save.isPending} disabled={!dot}>

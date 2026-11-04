@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { createLuotKham, getBenhNhan, getDotDangDieuTri, searchBenhNhanToanChuoi } from '../api/endpoints'
+import { createLuotKham, getBenhNhan, getDotDangDieuTri } from '../api/endpoints'
 import type { ChanDoanInput, LuotKhamRequest, TaoLuot } from '../api/types'
 import {
   AddIcon,
@@ -11,7 +11,6 @@ import {
   BaseCard,
   BaseCheckableTags,
   BaseCol,
-  BaseDatePicker,
   BaseDateTimePicker,
   BaseDescriptions,
   BaseErrorAlert,
@@ -56,8 +55,6 @@ interface FormValues extends ChiTietFormValues {
   thoiGian: Dayjs
   lyDoKham?: string
   trieuChung?: string
-  ketLuanKham?: string
-  ngayHenTaiKham?: Dayjs | null
   ghiChu?: string
   chanDoan?: { maBenh?: string; mucDo: ChanDoanInput['mucDo']; soLanChuaCanThiet: number }[]
 }
@@ -87,14 +84,6 @@ export function LuotKhamPage() {
 
   const local = useQuery({ queryKey: ['benh-nhan', site, ''], queryFn: () => getBenhNhan(site) })
   const localBN = (local.data ?? []).find((p) => p.maBN === maBN)
-  // Bệnh nhân chưa có hồ sơ tại chi nhánh (đến từ màn Tiếp đón): lấy thông tin từ view toàn chuỗi
-  const chain = useQuery({
-    queryKey: ['benh-nhan-toan-chuoi', site, maBNParam],
-    queryFn: () => searchBenhNhanToanChuoi(site, maBNParam!),
-    enabled: !!maBNParam && !!local.data && !local.data.some((p) => p.maBN === maBNParam),
-    retry: false,
-  })
-  const chainBN = (chain.data ?? []).find((p) => p.maBN === maBN)
   const dotMo = useQuery({
     queryKey: ['dot-dang', site, maBN],
     queryFn: () => getDotDangDieuTri(site, maBN!),
@@ -140,8 +129,6 @@ export function LuotKhamPage() {
       thoiGian: toLocalDateTime(v.thoiGian),
       lyDoKham: blankToNull(v.lyDoKham),
       trieuChung: blankToNull(v.trieuChung),
-      ketLuanKham: blankToNull(v.ketLuanKham),
-      ngayHenTaiKham: v.ngayHenTaiKham ? v.ngayHenTaiKham.format('YYYY-MM-DD') : null,
       ghiChu: blankToNull(v.ghiChu),
       chanDoan: (v.chanDoan ?? []).filter((c) => c?.maBenh).map((c) => ({ ...c, maBenh: c.maBenh! })),
       ...toChiTietInput(v),
@@ -149,9 +136,6 @@ export function LuotKhamPage() {
 
   const bnOptions = [
     ...(local.data ?? []).map((p) => ({ value: p.maBN, label: `${p.hoTen} · ${p.maBN}${p.cccd ? ` · ${p.cccd}` : ''}` })),
-    ...(chain.data ?? [])
-      .filter((p) => !(local.data ?? []).some((x) => x.maBN === p.maBN))
-      .map((p) => ({ value: p.maBN, label: `${p.hoTen} · ${p.maBN} · từ chi nhánh khác` })),
   ]
   const bacSiOptions = cat.bacSi
     .filter((b) => !maKhoa || b.maKhoa === maKhoa)
@@ -169,7 +153,7 @@ export function LuotKhamPage() {
   const tien = tinhTien(values, cat.catalogs)
   const soChanDoan = (values.chanDoan ?? []).filter((c) => c?.maBenh).length
   const soYTa = (values.yTa ?? []).length
-  const bn = localBN ?? chainBN
+  const bn = localBN
 
   return (
     <>
@@ -212,11 +196,11 @@ export function LuotKhamPage() {
                   ]}
                 />
               )}
-              {maBN && !localBN && chainBN && (
+              {maBN && local.data && !localBN && (
                 <BaseAlert
-                  type="info"
-                  title={`Chưa có hồ sơ tại ${branch?.shortName ?? site}`}
-                  description={`Khi lưu, backend chép bản ghi BENH_NHAN (giữ mã ${maBN}) từ view toàn chuỗi vào ${site} trước, trong cùng transaction.`}
+                  type="warning"
+                  title={`Bệnh nhân ${maBN} chưa có hồ sơ tại ${branch?.shortName ?? site}`}
+                  description="Lập hồ sơ ở màn Tiếp đón (nhập số CCCD / thẻ BHYT để dùng lại mã cũ) rồi tạo lượt."
                 />
               )}
               {dangMo.length > 0 && (
@@ -287,28 +271,6 @@ export function LuotKhamPage() {
                 <BaseCol xs={24}>
                   <BaseFormItem name="trieuChung" label="Triệu chứng">
                     <BaseTextArea rows={2} maxLength={1000} />
-                  </BaseFormItem>
-                </BaseCol>
-                <BaseCol xs={24} md={12}>
-                  <BaseFormItem name="ketLuanKham" label="Kết luận khám" extra="Bỏ trống và không chẩn đoán → ghi “Không phát hiện bệnh”">
-                    <BaseInput maxLength={500} placeholder="VD: Viêm họng cấp" />
-                  </BaseFormItem>
-                </BaseCol>
-                <BaseCol xs={24} md={12}>
-                  <BaseFormItem
-                    name="ngayHenTaiKham"
-                    label="Ngày hẹn tái khám"
-                    dependencies={['thoiGian']}
-                    rules={[
-                      ({ getFieldValue }) => ({
-                        validator: (_, v: Dayjs | null) =>
-                          !v || v.isAfter(getFieldValue('thoiGian'), 'day')
-                            ? Promise.resolve()
-                            : Promise.reject(new Error('Ngày hẹn phải sau ngày khám')),
-                      }),
-                    ]}
-                  >
-                    <BaseDatePicker />
                   </BaseFormItem>
                 </BaseCol>
               </BaseRow>

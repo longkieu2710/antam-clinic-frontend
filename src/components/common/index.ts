@@ -1,7 +1,7 @@
 /**
  * Component dùng chung — lớp bọc quanh Ant Design, chia theo nhóm chức năng:
  *
- *   provider/    cấu hình chung (tiếng Việt, theme)        BaseProvider
+ *   provider/    cấu hình chung (tiếng Việt, theme)        BaseProvider, BaseReadOnlyProvider, BaseWritable, useBaseReadOnly
  *   layout/      khung & bố cục                            BaseLayout, BaseHeader, BaseSider, BaseContent, BaseMenu, BaseRow, BaseCol, BaseSpace, BaseDivider,
  *                                                             BaseTabs
  *   form/        form & ô nhập liệu                        BaseForm, BaseFormItem, BaseFormList, useBaseForm, useBaseWatch, BaseInput, BaseSearchInput, BaseTextArea,

@@ -16,16 +16,18 @@ import {
 } from '../components/common'
 import type { SiteStatus } from '../api/types'
 import { PageTitle } from '../layout/PageTitle'
+import { useSite } from '../site/useSite'
 
-/** Trạng thái 4 trạm CSDL — kiểm tra nhanh cụm Docker đã chạy đúng chưa. */
+/** Trạng thái các trạm CSDL mà bản này nối tới — kiểm tra nhanh cụm Docker đã chạy đúng chưa. */
 export function DashboardPage() {
+  const { mode, site } = useSite()
   const query = useQuery({ queryKey: ['system-sites'], queryFn: getSiteStatus, refetchInterval: 15_000 })
 
   return (
     <>
       <PageTitle
         title="Tổng quan hệ thống"
-        description="Trạng thái kết nối tới 4 trạm CSDL phân tán. Tự làm mới mỗi 15 giây."
+        description={`Trạng thái kết nối tới ${mode === 'ALL' ? '4 trạm CSDL phân tán' : 'các trạm CSDL bản này dùng'}. Tự làm mới mỗi 15 giây.`}
         extra={
           <BaseButton icon={<ReloadIcon />} loading={query.isFetching} onClick={() => query.refetch()}>
             Kiểm tra lại
@@ -57,7 +59,21 @@ export function DashboardPage() {
         title="Ứng dụng chọn trạm như thế nào?"
         description={
           <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>Các màn của chi nhánh gửi header <code>X-Site</code> theo ô "Chi nhánh đang làm việc" trên thanh tiêu đề.</li>
+            {mode === 'ALL' && (
+              <li>Các màn của chi nhánh gửi header <code>X-Site</code> theo ô "Chi nhánh đang làm việc" trên thanh tiêu đề.</li>
+            )}
+            {mode === 'BRANCH' && (
+              <li>
+                Máy chi nhánh: chỉ dữ liệu của trạm {site} (dòng <code>app.may-nay</code> trong application.yml), không xem được chi
+                nhánh khác hay chức năng Trung tâm. Mất kết nối Trung tâm vẫn tiếp đón, khám chữa và báo cáo chi nhánh bình thường.
+              </li>
+            )}
+            {mode === 'HQ' && (
+              <li>
+                Máy Trung tâm: danh mục chung và báo cáo toàn chuỗi ở S0; bác sĩ, y tá, bệnh nhân, khoa, thiết bị của cả chuỗi
+                đọc qua view toàn cục (có cột chi nhánh) — chỉ xem, thêm / sửa / xoá làm ở máy chi nhánh.
+              </li>
+            )}
             <li>Danh mục chung (thuốc, chi nhánh…) luôn ghi ở S0 qua <code>/api/master/**</code>; Logical Replication tự đẩy xuống S1–S3.</li>
             <li>Báo cáo toàn chuỗi đọc ở S0 qua <code>/api/hq/**</code> (view gộp 3 chi nhánh bằng postgres_fdw).</li>
           </ul>

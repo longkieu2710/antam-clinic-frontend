@@ -22,6 +22,7 @@ import {
   WalletIcon,
 } from '../components/common'
 import type { ReactNode } from 'react'
+import type { AppMode } from '../api/types'
 
 export interface MenuEntry {
   path: string
@@ -31,6 +32,13 @@ export interface MenuEntry {
   hub?: boolean
   /** Đã có màn hình thật; false = trang "đang phát triển" */
   done?: boolean
+  /** Có trong bản chi nhánh. Mặc định: mọi màn trừ màn của Trung tâm (hub) */
+  branchApp?: boolean
+  /**
+   * Có trong bản Trung tâm. Mặc định có — danh mục chi nhánh (bác sĩ, y tá, bệnh nhân, khoa, thiết bị) ở đó là danh sách
+   * toàn chuỗi, chỉ xem. false: màn ghi (tiếp đón, tạo lượt) và màn theo từng chi nhánh (đã có bản toàn chuỗi ở nhóm S0)
+   */
+  hqApp?: boolean
 }
 
 export interface MenuGroup {
@@ -45,16 +53,16 @@ export const MENU: MenuGroup[] = [
     label: 'Tổng quan',
     items: [
       { path: '/', label: 'Tổng quan hệ thống', icon: <DashboardIcon />, done: true },
-      { path: '/tong-quan', label: 'Tổng quan chi nhánh', icon: <HomeIcon />, done: true },
+      { path: '/tong-quan', label: 'Tổng quan chi nhánh', icon: <HomeIcon />, done: true, hqApp: false },
     ],
   },
   {
     label: 'Tiếp đón & khám chữa',
     items: [
-      { path: '/tiep-don', label: 'Tiếp đón', icon: <SearchIcon />, done: true },
-      { path: '/luot-kham-moi', label: 'Tạo lượt khám', icon: <FileAddIcon />, done: true },
-      { path: '/luot-chua-moi', label: 'Tạo lượt chữa', icon: <RetweetIcon />, done: true },
-      { path: '/luot', label: 'Danh sách lượt', icon: <ListIcon />, done: true },
+      { path: '/tiep-don', label: 'Tiếp đón', icon: <SearchIcon />, done: true, hqApp: false },
+      { path: '/luot-kham-moi', label: 'Tạo lượt khám', icon: <FileAddIcon />, done: true, hqApp: false },
+      { path: '/luot-chua-moi', label: 'Tạo lượt chữa', icon: <RetweetIcon />, done: true, hqApp: false },
+      { path: '/luot', label: 'Danh sách lượt', icon: <ListIcon />, done: true, hqApp: false },
     ],
   },
   {
@@ -65,15 +73,16 @@ export const MENU: MenuGroup[] = [
       { path: '/benh-nhan', label: 'Bệnh nhân', icon: <IdCardIcon />, done: true },
       { path: '/khoa', label: 'Khoa', icon: <ApartmentIcon />, done: true },
       { path: '/thiet-bi', label: 'Thiết bị', icon: <ToolIcon />, done: true },
+      { path: '/thuoc-chi-nhanh', label: 'Thuốc (bản sao)', icon: <ExperimentIcon />, done: true, hqApp: false },
     ],
   },
   {
     label: 'Báo cáo chi nhánh',
     items: [
-      { path: '/bc-benh', label: 'Thống kê bệnh', icon: <BarChartIcon />, done: true },
-      { path: '/bc-luong', label: 'Lương BS & y tá', icon: <WalletIcon />, done: true },
-      { path: '/ho-so', label: 'Hồ sơ bệnh nhân', icon: <ProfileIcon />, done: true },
-      { path: '/bc-doanh-thu', label: 'Doanh thu', icon: <DollarIcon />, done: true },
+      { path: '/bc-benh', label: 'Thống kê bệnh', icon: <BarChartIcon />, done: true, hqApp: false },
+      { path: '/bc-luong', label: 'Lương BS & y tá', icon: <WalletIcon />, done: true, hqApp: false },
+      { path: '/ho-so', label: 'Hồ sơ bệnh nhân', icon: <ProfileIcon />, done: true, hqApp: false },
+      { path: '/bc-doanh-thu', label: 'Doanh thu', icon: <DollarIcon />, done: true, hqApp: false },
     ],
   },
   {
@@ -95,3 +104,16 @@ export const MENU: MenuGroup[] = [
 export const ALL_ENTRIES = MENU.flatMap((g) => g.items)
 
 export const findEntry = (path: string) => ALL_ENTRIES.find((e) => e.path === path)
+
+/**
+ * Màn có trong bản triển khai này không. Bản chi nhánh: chỉ dữ liệu của chi nhánh đó (thuốc xem ở bản sao), không có màn
+ * Trung tâm. Bản Trung tâm: màn Trung tâm + danh mục của cả chuỗi (chỉ xem), không chọn chi nhánh.
+ */
+export function availableIn(entry: MenuEntry, mode: AppMode): boolean {
+  if (mode === 'BRANCH') return entry.branchApp ?? !entry.hub
+  if (mode === 'HQ') return entry.hqApp ?? true
+  return true
+}
+
+export const menuFor = (mode: AppMode): MenuGroup[] =>
+  MENU.map((g) => ({ ...g, items: g.items.filter((e) => availableIn(e, mode)) })).filter((g) => g.items.length > 0)

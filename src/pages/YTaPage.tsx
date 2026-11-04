@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
-import { createYTa, deleteYTa, getKhoa, getYTa, updateYTa } from '../api/endpoints'
+import { createYTa, deleteYTa, getKhoa, getKhoaToanChuoi, getYTa, getYTaToanChuoi, updateYTa } from '../api/endpoints'
 import type { YTa, YTaRequest } from '../api/types'
 import {
   AddIcon,
@@ -24,12 +24,14 @@ import {
   BaseTag,
   BaseTagsInput,
   BaseText,
+  BaseWritable,
   useBaseForm,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
 import { useCrudMutations } from '../hooks/useCrudMutations'
 import { PageTitle } from '../layout/PageTitle'
 import { useSite } from '../site/useSite'
+import { useTenChiNhanh } from '../site/useTenChiNhanh'
 import { age, blankToNull } from '../utils/format'
 
 interface FormValues {
@@ -60,7 +62,9 @@ const toDate = (d?: Dayjs | null) => (d ? d.format('YYYY-MM-DD') : null)
  * Xoá y tá đã hỗ trợ lượt khám/chữa → backend chuyển "Ngừng hoạt động" (BR9).
  */
 export function YTaPage() {
-  const { site, branch } = useSite()
+  const { mode, site, branch } = useSite()
+  const hq = mode === 'HQ'
+  const tenCn = useTenChiNhanh()
   const form = useBaseForm<FormValues>()
 
   const [q, setQ] = useState('')
@@ -68,8 +72,14 @@ export function YTaPage() {
   const [editing, setEditing] = useState<YTa | null>(null)
   const [open, setOpen] = useState(false)
 
-  const khoaQuery = useQuery({ queryKey: ['khoa', site], queryFn: () => getKhoa(site) })
-  const listQuery = useQuery({ queryKey: ['y-ta', site, q, khoa], queryFn: () => getYTa(site, q, khoa) })
+  const khoaQuery = useQuery({
+    queryKey: hq ? ['khoa-toan-chuoi'] : ['khoa', site],
+    queryFn: () => (hq ? getKhoaToanChuoi() : getKhoa(site)),
+  })
+  const listQuery = useQuery({
+    queryKey: hq ? ['y-ta-toan-chuoi', q, khoa] : ['y-ta', site, q, khoa],
+    queryFn: () => (hq ? getYTaToanChuoi(q, khoa) : getYTa(site, q, khoa)),
+  })
 
   const crud = useCrudMutations({
     form,
@@ -124,10 +134,11 @@ export function YTaPage() {
       soDienThoai: (v.soDienThoai ?? []).map((s) => s.trim()).filter(Boolean),
     })
 
-  const khoaOptions = (khoaQuery.data ?? []).map((k) => ({ value: k.maKhoa, label: k.tenKhoa }))
+  const khoaOptions = (khoaQuery.data ?? []).map((k) => ({ value: k.maKhoa, label: hq ? `${k.tenKhoa} · ${tenCn(k.maCn)}` : k.tenKhoa }))
 
   const columns: BaseColumns<YTa> = [
     { title: 'Mã YT', dataIndex: 'maNV', render: (v: string) => <code>{v}</code>, width: 120 },
+    ...(hq ? [{ title: 'Chi nhánh', dataIndex: 'maCn', width: 110, render: (v: string | null) => <BaseTag>{tenCn(v)}</BaseTag> }] : []),
     {
       title: 'Họ tên',
       render: (_, r) => (
@@ -180,11 +191,17 @@ export function YTaPage() {
     <>
       <PageTitle
         title="Y tá"
-        description={`Nhân viên loại YT của ${branch?.tenCn ?? site} (NHAN_VIEN ⟶ Y_TA). Mỗi lượt hỗ trợ được thưởng 200.000 ₫ khi tính lương.`}
+        description={
+          hq
+            ? 'Y tá của cả chuỗi — view toàn cục Y_TA ⨝ NHAN_VIEN ở S0 (postgres_fdw), chỉ xem.'
+            : `Nhân viên loại YT của ${branch?.tenCn ?? site} (NHAN_VIEN ⟶ Y_TA). Mỗi lượt hỗ trợ được thưởng 200.000 ₫ khi tính lương.`
+        }
         extra={
-          <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>
-            Thêm y tá
-          </BaseButton>
+          <BaseWritable>
+            <BaseButton type="primary" icon={<AddIcon />} onClick={openCreate}>
+              Thêm y tá
+            </BaseButton>
+          </BaseWritable>
         }
       />
 

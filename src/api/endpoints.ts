@@ -2,11 +2,11 @@ import { api } from './http'
 import type {
   BacSi,
   BacSiRequest,
+  AppModeInfo,
   BangLuong,
   Benh,
   BenhNhan,
   BenhNhanRequest,
-  BenhNhanToanChuoi,
   BenhNhanTomTat,
   BenhRequest,
   ChiNhanh,
@@ -26,6 +26,8 @@ import type {
   LuotChuaRequest,
   LuotKhamRequest,
   SiteStatus,
+  SuaLuotChuaRequest,
+  SuaLuotKhamRequest,
   TaoLuot,
   ThietBi,
   ThietBiRequest,
@@ -34,15 +36,19 @@ import type {
   Thuoc,
   TongQuan,
   ThuocRequest,
+  TiepDon,
   YTa,
   YTaRequest,
 } from './types'
 
 // ---- Hệ thống (không cần X-Site)
 export const getSiteStatus = () => api<SiteStatus[]>('/api/system/sites')
+export const getAppMode = () => api<AppModeInfo>('/api/system/mode')
 
 // ---- Danh mục chung tại S0
 export const getChiNhanh = () => api<ChiNhanh[]>('/api/master/chi-nhanh')
+/** Bản sao CHI_NHANH tại chi nhánh — bản chi nhánh không vào được /api/master/** */
+export const getChiNhanhCucBo = (site: string) => api<ChiNhanh[]>('/api/chi-nhanh', { site })
 export const updateChiNhanh = (maCn: string, body: Pick<ChiNhanh, 'tenCn' | 'diaChi' | 'soDienThoai'>) =>
   api<unknown>(`/api/master/chi-nhanh/${encodeURIComponent(maCn)}`, { method: 'PUT', body })
 
@@ -73,8 +79,8 @@ export const deleteYTa = (site: string, maNV: string) =>
   api<DeleteResult>(`/api/y-ta/${encodeURIComponent(maNV)}`, { site, method: 'DELETE' })
 
 export const getBenhNhan = (site: string, q?: string) => api<BenhNhan[]>('/api/benh-nhan', { site, query: { q } })
-export const searchBenhNhanToanChuoi = (site: string, q: string) =>
-  api<BenhNhanToanChuoi[]>('/api/benh-nhan/toan-chuoi', { site, query: { q } })
+/** Tiếp đón: hồ sơ tại chi nhánh; với số CCCD / thẻ BHYT đầy đủ thêm mã bệnh nhân ở chi nhánh khác (không thông tin cá nhân) */
+export const tiepDon = (site: string, q: string) => api<TiepDon>('/api/benh-nhan/tiep-don', { site, query: { q } })
 export const createBenhNhan = (site: string, body: BenhNhanRequest) =>
   api<BenhNhan>('/api/benh-nhan', { site, method: 'POST', body })
 export const updateBenhNhan = (site: string, maBN: string, body: BenhNhanRequest) =>
@@ -146,8 +152,12 @@ export const deleteLuot = (site: string, maLuot: string) =>
   api<DeleteResult>(`/api/luot/${encodeURIComponent(maLuot)}`, { site, method: 'DELETE' })
 export const createLuotKham = (site: string, body: LuotKhamRequest) =>
   api<TaoLuot>('/api/luot-kham', { site, method: 'POST', body })
+export const suaLuotKham = (site: string, maLuot: string, body: SuaLuotKhamRequest) =>
+  api<LuotChiTiet>(`/api/luot-kham/${encodeURIComponent(maLuot)}`, { site, method: 'PUT', body })
 export const createLuotChua = (site: string, body: LuotChuaRequest) =>
   api<TaoLuot>('/api/luot-chua', { site, method: 'POST', body })
+export const suaLuotChua = (site: string, maLuot: string, body: SuaLuotChuaRequest) =>
+  api<LuotChiTiet>(`/api/luot-chua/${encodeURIComponent(maLuot)}`, { site, method: 'PUT', body })
 export const getDotDangDieuTri = (site: string, maBN: string) =>
   api<DotDieuTri[]>(`/api/benh-nhan/${encodeURIComponent(maBN)}/dot-dang-dieu-tri`, { site })
 export const ngungDieuTri = (site: string, maCDDT: string) =>
@@ -159,6 +169,11 @@ export const getBenhReplica = (site: string) => api<Benh[]>('/api/benh', { site 
 export const getDichVuReplica = (site: string) => api<DichVu[]>('/api/dich-vu', { site })
 
 // ---- Toàn chuỗi (S0)
+// ---- Trung tâm xem toàn chuỗi (view toàn cục ở S0, mỗi dòng có maCn)
+export const getBacSiToanChuoi = (q?: string, khoa?: string) => api<BacSi[]>('/api/hq/bac-si', { query: { q, khoa } })
+export const getYTaToanChuoi = (q?: string, khoa?: string) => api<YTa[]>('/api/hq/y-ta', { query: { q, khoa } })
+export const getKhoaToanChuoi = () => api<Khoa[]>('/api/hq/khoa')
+export const getThietBiToanChuoi = (q?: string) => api<ThietBi[]>('/api/hq/thiet-bi', { query: { q } })
 export const getBenhNhanToanChuoiHq = (q?: string) => api<BenhNhanTomTat[]>('/api/hq/benh-nhan', { query: { q } })
 /** → { maBN: ['CN1', 'CN3'] } */
 export const getChiNhanhCoHoSo = (ma: string[]) =>
