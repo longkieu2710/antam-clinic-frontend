@@ -51,7 +51,7 @@ export function TongQuanChiNhanhPage() {
   const luotColumns: BaseColumns<Luot> = [
     {
       title: 'Lượt',
-      width: 160,
+      width: 180,
       render: (_, r) => (
         <>
           <BaseTag color={r.loaiLuot === 'KHAM' ? 'blue' : 'purple'}>{r.loaiLuot === 'KHAM' ? 'Khám' : `Chữa lần ${r.lanThu ?? '?'}`}</BaseTag>

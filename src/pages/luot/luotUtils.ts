@@ -93,7 +93,7 @@ export function toChiTietInput(v: ChiTietFormValues): ChiTietLuotInput {
 }
 
 /** dayjs → 'yyyy-MM-ddTHH:mm:ss' theo giờ máy (backend dùng LocalDateTime, không có múi giờ). */
-export const toLocalDateTime = (d: Dayjs) => d.second(0).millisecond(0).format('YYYY-MM-DDTHH:mm:ss')
+export const toLocalDateTime = (d: Dayjs) => d.millisecond(0).format('YYYY-MM-DDTHH:mm:ss')
 
 /** Mã lượt xem trước (BR5) — số thứ tự NNN do backend sinh khi lưu. */
 export const maLuotPreview = (loai: 'K' | 'C', maKhoa?: string, maBS?: string, t?: Dayjs) =>

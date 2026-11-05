@@ -9,6 +9,7 @@ import type {
   BenhNhanRequest,
   BenhNhanTomTat,
   BenhRequest,
+  ChanDoanInput,
   ChiNhanh,
   DeleteResult,
   DichVu,
@@ -152,6 +153,8 @@ export const deleteLuot = (site: string, maLuot: string) =>
   api<DeleteResult>(`/api/luot/${encodeURIComponent(maLuot)}`, { site, method: 'DELETE' })
 export const createLuotKham = (site: string, body: LuotKhamRequest) =>
   api<TaoLuot>('/api/luot-kham', { site, method: 'POST', body })
+export const themChanDoan = (site: string, maLuot: string, body: ChanDoanInput) =>
+  api<DotDieuTri>(`/api/luot-kham/${encodeURIComponent(maLuot)}/chan-doan`, { site, method: 'POST', body })
 export const suaLuotKham = (site: string, maLuot: string, body: SuaLuotKhamRequest) =>
   api<LuotChiTiet>(`/api/luot-kham/${encodeURIComponent(maLuot)}`, { site, method: 'PUT', body })
 export const createLuotChua = (site: string, body: LuotChuaRequest) =>

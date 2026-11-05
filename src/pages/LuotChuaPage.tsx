@@ -53,10 +53,7 @@ interface FormValues extends ChiTietFormValues {
   ghiChu?: string
 }
 
-const now5 = () => {
-  const n = dayjs()
-  return n.minute(Math.floor(n.minute() / 5) * 5).second(0).millisecond(0)
-}
+
 
 /**
  * Tạo lượt chữa: lần tái khám / điều trị tiếp theo của một đợt đang mở.
@@ -100,7 +97,7 @@ export function LuotChuaPage() {
   const reset = () => {
     form.resetFields()
     form.setFieldsValue({
-      thoiGian: now5(),
+      thoiGian: dayjs(),
       hinhThuc: [],
       yTa: [],
       dichVu: [],
@@ -138,7 +135,7 @@ export function LuotChuaPage() {
   const submit = (v: FormValues) =>
     save.mutate({
       maCDDT: dot!.maCDDT,
-      thoiGian: toLocalDateTime(v.thoiGian),
+      thoiGian: toLocalDateTime(v.thoiGian ?? dayjs()),
       hinhThuc: v.hinhThuc ?? [],
       ghiChu: blankToNull(v.ghiChu),
       ...toChiTietInput(v),
@@ -173,7 +170,7 @@ export function LuotChuaPage() {
     { title: 'Bác sĩ phụ trách', dataIndex: 'tenBS', width: 170, render: (v: string | null, d) => v ?? d.maBS },
     {
       title: 'Lượt gần nhất · hẹn',
-      width: 170,
+      width: 185,
       render: (_, d) => (
         <>
           {dateTimeVN(d.luotGanNhat)}
@@ -213,7 +210,7 @@ export function LuotChuaPage() {
       {save.error && <BaseErrorAlert title="Chưa lưu được lượt chữa" error={save.error} style={{ marginBottom: 16 }} />}
       {cat.error && <BaseErrorAlert title="Không tải được danh mục của chi nhánh" error={cat.error} style={{ marginBottom: 16 }} />}
 
-      <BaseForm<FormValues> form={form} onFinish={submit} submitOnEnter={false}>
+      <BaseForm<FormValues> form={form} initialValues={{ thoiGian: dayjs() }} onFinish={submit} submitOnEnter={false}>
         <div className="luot-layout">
           <div>
             <BaseCard title="1. Bệnh nhân">
@@ -281,23 +278,14 @@ export function LuotChuaPage() {
                       <BaseFormItem
                         name="thoiGian"
                         label="Thời gian chữa"
-                        extra={`Phải sau ${dateTimeVN(dot.luotGanNhat)} — lượt gần nhất của đợt (BR3)`}
-                        rules={[
-                          { required: true, message: 'Chọn thời gian chữa' },
-                          {
-                            validator: (_, v: Dayjs | undefined) =>
-                              !v || v.isAfter(dayjs(dot.luotGanNhat))
-                                ? Promise.resolve()
-                                : Promise.reject(new Error('Phải sau lượt gần nhất của đợt (BR3)')),
-                          },
-                        ]}
+                        extra="Thời gian hiện tại của lần chữa (cố định)"
                       >
-                        <BaseDateTimePicker disableFuture allowClear={false} disabledDate={(d) => d.isBefore(dayjs(dot.luotGanNhat), 'day')} />
+                        <BaseDateTimePicker disabled allowClear={false} format="DD/MM/YYYY HH:mm:ss" showTime={{ format: 'HH:mm:ss' }} />
                       </BaseFormItem>
                     </BaseCol>
                     <BaseCol xs={24} md={12}>
-                      <BaseFormItem label="Mã lượt (BR5)" extra={`Lần chữa thứ ${lanThu} của đợt`}>
-                        <BaseInput readOnly value={maLuotPreview('C', dot.maKhoa, dot.maBS, values.thoiGian)} style={{ fontFamily: 'monospace' }} />
+                      <BaseFormItem label="Mã lượt (BR5)" extra={`Lần chữa thứ ${lanThu} của đợt (tự sinh)`}>
+                        <BaseInput disabled prefix={<LockIcon />} value={maLuotPreview('C', dot.maKhoa, dot.maBS, values.thoiGian ?? dayjs())} style={{ fontFamily: 'monospace' }} />
                       </BaseFormItem>
                     </BaseCol>
                     <BaseCol xs={24}>

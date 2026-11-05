@@ -59,10 +59,7 @@ interface FormValues extends ChiTietFormValues {
   chanDoan?: { maBenh?: string; mucDo: ChanDoanInput['mucDo']; soLanChuaCanThiet: number }[]
 }
 
-const now5 = () => {
-  const n = dayjs()
-  return n.minute(Math.floor(n.minute() / 5) * 5).second(0).millisecond(0)
-}
+
 
 /**
  * Tạo lượt khám: LUOT_KHAM_CHUA (KHAM) + LAN_KHAM + mỗi chẩn đoán mở một đợt CHAN_DOAN_DIEU_TRI + y tá hỗ trợ +
@@ -96,7 +93,7 @@ export function LuotKhamPage() {
     form.resetFields()
     form.setFieldsValue({
       maBN: bn,
-      thoiGian: now5(),
+      thoiGian: dayjs(),
       chanDoan: [],
       yTa: [],
       dichVu: khamDV ? [{ maDV: khamDV.maDV, soLuong: 1 }] : [],
@@ -166,7 +163,7 @@ export function LuotKhamPage() {
       {save.error && <BaseErrorAlert title="Chưa lưu được lượt khám" error={save.error} style={{ marginBottom: 16 }} />}
       {cat.error && <BaseErrorAlert title="Không tải được danh mục của chi nhánh" error={cat.error} style={{ marginBottom: 16 }} />}
 
-      <BaseForm<FormValues> form={form} onFinish={submit} submitOnEnter={false}>
+      <BaseForm<FormValues> form={form} initialValues={{ thoiGian: dayjs() }} onFinish={submit} submitOnEnter={false}>
         <div className="luot-layout">
           <div>
             <BaseCard title={<>1. Bệnh nhân <span className="muted">LAN_KHAM.MaBN</span></>}>

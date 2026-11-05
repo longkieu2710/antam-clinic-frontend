@@ -18,7 +18,6 @@ import {
   BaseTag,
   BaseText,
   BaseWritable,
-  RetweetIcon,
 } from '../components/common'
 import type { BaseColumns } from '../components/common'
 import { PageTitle } from '../layout/PageTitle'
@@ -27,31 +26,30 @@ import { dateTimeVN, money } from '../utils/format'
 import { LuotDetailDrawer } from './luot/LuotDetailDrawer'
 import { useLuotCatalogs } from './luot/useLuotCatalogs'
 
-/** Danh sách lượt khám / chữa của chi nhánh — lọc theo kỳ, loại, khoa, bác sĩ; bấm một dòng để xem chi tiết. */
+/** Danh sách lượt khám của chi nhánh — lọc theo kỳ, khoa, bác sĩ; bấm một dòng để xem chi tiết đợt và các lượt chữa. */
 export function LuotPage() {
   const { site, branch } = useSite()
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const [range, setRange] = useState<[Dayjs, Dayjs]>(() => [dayjs().subtract(2, 'month').startOf('month'), dayjs()])
-  const [loai, setLoai] = useState<string>()
   const [khoa, setKhoa] = useState<string>()
   const [bs, setBs] = useState<string>()
   const [q, setQ] = useState('')
   const cat = useLuotCatalogs(site)
   const maLuot = params.get('ma')
 
-  const filter = { tu: range[0].format('YYYY-MM-DD'), den: range[1].format('YYYY-MM-DD'), loai, khoa, bs, q }
+  const filter = { tu: range[0].format('YYYY-MM-DD'), den: range[1].format('YYYY-MM-DD'), loai: 'KHAM', khoa, bs, q }
   const query = useQuery({ queryKey: ['luot', site, filter], queryFn: () => getLuot(site, filter) })
   const rows = query.data ?? []
   const tong = rows.reduce((s, r) => s + r.tongTien, 0)
 
   const columns: BaseColumns<Luot> = [
     {
-      title: 'Lượt',
-      width: 200,
+      title: 'Lượt khám',
+      width: 190,
       render: (_, r) => (
         <>
-          <BaseTag color={r.loaiLuot === 'KHAM' ? 'blue' : 'purple'}>{r.loaiLuot === 'KHAM' ? 'Khám' : `Chữa lần ${r.lanThu ?? '?'}`}</BaseTag>
+          <BaseTag color="blue">Khám</BaseTag>
           <div>{dateTimeVN(r.thoiGian)}</div>
           <code className="muted">{r.maLuot}</code>
         </>
@@ -68,14 +66,14 @@ export function LuotPage() {
       ),
     },
     {
-      title: 'Bệnh / nội dung',
+      title: 'Bệnh / Chẩn đoán',
       render: (_, r) => (
         <>
-          {r.benh ?? <span className="muted">Không phát hiện bệnh</span>}
+          <div>
+            <BaseText strong>{r.benh ?? <span className="muted">Không phát hiện bệnh</span>}</BaseText>
+          </div>
           <div className="muted">
-            {r.loaiLuot === 'KHAM'
-              ? [r.lyDoKham, r.ketLuanKham && `KL: ${r.ketLuanKham}`].filter(Boolean).join(' · ')
-              : [r.hinhThucChua, r.tinhTrangSauChua].filter(Boolean).join(' · ')}
+            {[r.lyDoKham, r.ketLuanKham && `KL: ${r.ketLuanKham}`].filter(Boolean).join(' · ')}
           </div>
         </>
       ),
@@ -89,16 +87,13 @@ export function LuotPage() {
   return (
     <>
       <PageTitle
-        title="Danh sách lượt khám / chữa"
-        description={`Các lượt tại ${branch?.tenCn ?? site} — bấm một dòng để xem chẩn đoán, y tá hỗ trợ, chi phí; xoá được lượt nhập nhầm trong tháng.`}
+        title="Danh sách lượt khám"
+        description={`Các lượt khám tại ${branch?.tenCn ?? site} — bấm một dòng để xem chẩn đoán, đợt điều trị, các lượt chữa của đợt và chi phí; xoá được lượt nhập nhầm trong tháng.`}
         extra={
           <BaseWritable>
             <BaseSpace>
-              <BaseButton icon={<RetweetIcon />} onClick={() => navigate('/luot-chua-moi')}>
-                Lượt chữa
-              </BaseButton>
               <BaseButton type="primary" icon={<AddIcon />} onClick={() => navigate('/luot-kham-moi')}>
-                Lượt khám
+                Tạo lượt khám
               </BaseButton>
             </BaseSpace>
           </BaseWritable>
@@ -108,18 +103,6 @@ export function LuotPage() {
       <div className="toolbar">
         <BaseSearchInput placeholder="Mã lượt, mã hoặc tên bệnh nhân…" allowClear onSearch={setQ} style={{ width: 280 }} />
         <BaseDateRangePicker value={range} onChange={setRange} aria-label="Kỳ" />
-        <BaseSelect
-          allowClear
-          placeholder="Loại: tất cả"
-          value={loai}
-          onChange={setLoai}
-          options={[
-            { value: 'KHAM', label: 'Khám' },
-            { value: 'CHUA', label: 'Chữa' },
-          ]}
-          style={{ width: 140 }}
-          aria-label="Loại lượt"
-        />
         <BaseSelect
           allowClear
           placeholder="Khoa: tất cả"
@@ -141,7 +124,7 @@ export function LuotPage() {
         />
       </div>
 
-      {query.error && <BaseErrorAlert title="Không tải được danh sách lượt" error={query.error} />}
+      {query.error && <BaseErrorAlert title="Không tải được danh sách lượt khám" error={query.error} />}
 
       <BaseTable<Luot>
         rowKey="maLuot"
@@ -155,7 +138,7 @@ export function LuotPage() {
           rows.length > 0 && (
             <BaseSummaryRow>
               <BaseSummaryCell index={0} colSpan={6}>
-                <strong>{rows.length} lượt</strong>
+                <strong>{rows.length} lượt khám</strong>
                 {rows.length >= 500 && <span className="muted"> · hiển thị tối đa 500 lượt mới nhất, thu hẹp bộ lọc để xem thêm</span>}
               </BaseSummaryCell>
               <BaseSummaryCell index={6} align="right">

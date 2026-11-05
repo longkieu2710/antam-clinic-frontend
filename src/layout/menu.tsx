@@ -62,7 +62,7 @@ export const MENU: MenuGroup[] = [
       { path: '/tiep-don', label: 'Tiếp đón', icon: <SearchIcon />, done: true, hqApp: false },
       { path: '/luot-kham-moi', label: 'Tạo lượt khám', icon: <FileAddIcon />, done: true, hqApp: false },
       { path: '/luot-chua-moi', label: 'Tạo lượt chữa', icon: <RetweetIcon />, done: true, hqApp: false },
-      { path: '/luot', label: 'Danh sách lượt', icon: <ListIcon />, done: true, hqApp: false },
+      { path: '/luot', label: 'Danh sách lượt khám', icon: <ListIcon />, done: true, hqApp: false },
     ],
   },
   {
@@ -117,3 +117,4 @@ export function availableIn(entry: MenuEntry, mode: AppMode): boolean {
 
 export const menuFor = (mode: AppMode): MenuGroup[] =>
   MENU.map((g) => ({ ...g, items: g.items.filter((e) => availableIn(e, mode)) })).filter((g) => g.items.length > 0)
+

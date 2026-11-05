@@ -5,7 +5,7 @@ export const money = (value: number | null | undefined) =>
 
 export const dateVN = (iso: string | null | undefined) => (iso ? dayjs(iso).format('DD/MM/YYYY') : '—')
 
-export const dateTimeVN = (iso: string | null | undefined) => (iso ? dayjs(iso).format('DD/MM/YYYY HH:mm') : '—')
+export const dateTimeVN = (iso: string | null | undefined) => (iso ? dayjs(iso).format('DD/MM/YYYY HH:mm:ss') : '—')
 
 /** '2026-09' → '09/2026' */
 export const monthVN = (yyyyMM: string) => `${yyyyMM.slice(5, 7)}/${yyyyMM.slice(0, 4)}`

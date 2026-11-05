@@ -2,14 +2,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { deleteLuot, getLuotChiTiet, suaLuotChua, suaLuotKham } from '../../api/endpoints'
+import { deleteLuot, getBenhReplica, getLuotChiTiet, suaLuotChua, suaLuotKham, themChanDoan } from '../../api/endpoints'
 import { errorText } from '../../api/http'
-import type { ChiPhi, Luot } from '../../api/types'
+import type { ChanDoanInput, ChiPhi, Luot } from '../../api/types'
 import {
+  AddIcon,
   ArrowLeftIcon,
   BaseAlert,
   BaseButton,
   BaseCard,
+  BaseCol,
   BaseDeleteButton,
   BaseDatePicker,
   BaseDescriptions,
@@ -19,6 +21,7 @@ import {
   BaseFormItem,
   BaseFormModal,
   BaseNumberInput,
+  BaseRow,
   BaseSelect,
   BaseSkeleton,
   BaseSpace,
@@ -37,7 +40,7 @@ import {
 } from '../../components/common'
 import type { BaseColumns } from '../../components/common'
 import { blankToNull, dateTimeVN, dateVN, money } from '../../utils/format'
-import { KHOI, LUOT_QUERY_KEYS, THUONG_DOT_KHOI, TINH_TRANG, trangThaiColor } from './luotUtils'
+import { KHOI, LUOT_QUERY_KEYS, MUC_DO, THUONG_DOT_KHOI, TINH_TRANG, trangThaiColor } from './luotUtils'
 
 const LOAI_CHI_PHI: Record<ChiPhi['loai'], { label: string; color: string }> = {
   DICH_VU: { label: 'Dịch vụ', color: 'blue' },
@@ -73,6 +76,8 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
   const queryClient = useQueryClient()
   const form = useBaseForm<SuaValues>()
   const [suaOpen, setSuaOpen] = useState(false)
+  const formThemDot = useBaseForm<ChanDoanInput>()
+  const [themDotOpen, setThemDotOpen] = useState(false)
   // Lượt chữa mở từ trong ngăn — quay lại được; bỏ khi ngăn mở một lượt khác
   const [nav, setNav] = useState<{ goc: string | null; mo: string[] }>({ goc: null, mo: [] })
   const mo = nav.goc === maLuot ? nav.mo : []
@@ -86,6 +91,34 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
     enabled: !!dangXem,
     retry: false,
   })
+  const benhList = useQuery({
+    queryKey: ['benh-replica', site],
+    queryFn: () => getBenhReplica(site),
+    enabled: !!dangXem,
+  })
+
+  const themDot = useMutation({
+    mutationFn: (body: ChanDoanInput) => themChanDoan(site, dangXem!, body),
+    onSuccess: (newDot) => {
+      notify.success(`Đã thêm chẩn đoán & đợt điều trị "${newDot.tenBenh}" (${newDot.maCDDT}).`)
+      setThemDotOpen(false)
+      formThemDot.resetFields()
+      queryClient.invalidateQueries({ queryKey: ['luot-chi-tiet', site, dangXem] })
+      LUOT_QUERY_KEYS.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }))
+    },
+    onError: (e) => notify.error(errorText(e)),
+  })
+
+  const moThemDot = () => {
+    themDot.reset()
+    formThemDot.resetFields()
+    formThemDot.setFieldsValue({
+      mucDo: 'Nhẹ',
+      soLanChuaCanThiet: 1,
+    })
+    setThemDotOpen(true)
+  }
+
   const sua = useMutation({
     mutationFn: (v: SuaValues) => {
       const ngayHen = v.ngayHenTaiKham ? v.ngayHenTaiKham.format('YYYY-MM-DD') : null
@@ -122,6 +155,12 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
   const l = d?.luot
   const kham = l?.loaiLuot === 'KHAM'
   const dot = d?.dotDieuTri ?? []
+  const benhOptions = (benhList.data ?? [])
+    .filter((b) => !dot.some((item) => item.maBenh === b.maBenh))
+    .map((b) => ({
+      value: b.maBenh,
+      label: `${b.tenBenh} (${b.maBenh}${b.maICD10 ? ` · ${b.maICD10}` : ''})`,
+    }))
   // Lượt chữa: "Khỏi" chỉ ở lần chữa cuối của đợt, cho lượt trong tháng hiện tại (thưởng tháng trước đã tính lương)
   const dotChua = kham ? undefined : dot[0]
   const lyDoKhongKhoi = !l || kham
@@ -178,7 +217,7 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
         </>
       ),
     },
-    { title: 'Thời gian', dataIndex: 'thoiGian', width: 130, render: (v: string) => dateTimeVN(v) },
+    { title: 'Thời gian', dataIndex: 'thoiGian', width: 170, render: (v: string) => dateTimeVN(v) },
     {
       title: 'Tình trạng sau chữa',
       render: (_, r) => (
@@ -214,7 +253,7 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
                 Hồ sơ
               </BaseButton>
             )}
-            {d.suaDuoc ? (
+            {kham || d.suaDuoc ? (
               <BaseEditButton type="default" size="middle" onClick={moSua} />
             ) : (
               <BaseTooltip title={d.lyDoKhongSua}>
@@ -279,53 +318,119 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
 
           <BaseCard
             size="small"
-            title={kham ? `Chẩn đoán → đợt điều trị mở từ lượt này (${dot.length})` : 'Đợt điều trị'}
+            title={kham ? `Chẩn đoán & Đợt điều trị (${dot.length})` : 'Đợt điều trị'}
+            extra={
+              kham && (
+                <BaseWritable>
+                  <BaseButton
+                    size="small"
+                    type="primary"
+                    icon={<AddIcon />}
+                    onClick={moThemDot}
+                  >
+                    Thêm chẩn đoán
+                  </BaseButton>
+                </BaseWritable>
+              )
+            }
             style={{ margin: '16px 0' }}
           >
             {dot.length === 0 ? (
-              <span className="muted">Không phát hiện bệnh — không mở đợt điều trị (BR13).</span>
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div className="muted" style={{ marginBottom: 12 }}>
+                  Không phát hiện bệnh — chưa mở đợt điều trị nào từ lượt khám này.
+                </div>
+                {kham && (
+                  <BaseWritable>
+                    <BaseButton type="primary" icon={<AddIcon />} onClick={moThemDot}>
+                      Thêm chẩn đoán & đợt điều trị
+                    </BaseButton>
+                  </BaseWritable>
+                )}
+              </div>
             ) : (
-              <ul className="list-plain">
-                {dot.map((x) => (
-                  <li key={x.maCDDT}>
-                    <div>
-                      <b>{x.tenBenh ?? x.maBenh}</b> {x.maICD10 && <BaseTag>{x.maICD10}</BaseTag>}
-                      <div className="muted">
-                        <code>{x.maCDDT}</code> · mức độ {x.mucDo ?? '—'} · đã chữa {x.soLanDaChua}/{x.soLanChuaCanThiet ?? '?'} lần
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {dot.map((x) => {
+                  const cacLuotChuaCuaDot = kham ? d.luotChua.filter((lc) => lc.maCDDT === x.maCDDT) : []
+                  return (
+                    <div
+                      key={x.maCDDT}
+                      style={{
+                        border: '1px solid #e8e8e8',
+                        borderRadius: 8,
+                        padding: '12px 14px',
+                        background: '#fafafa',
+                      }}
+                    >
+                      {/* Tiêu đề & Thông tin đợt chẩn đoán */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>
+                            {x.tenBenh ?? x.maBenh} {x.maICD10 && <BaseTag>{x.maICD10}</BaseTag>}
+                          </div>
+                          <div className="muted" style={{ marginTop: 2 }}>
+                            <code>{x.maCDDT}</code> · Mức độ: {x.mucDo ?? '—'} · Đã chữa {x.soLanDaChua}/{x.soLanChuaCanThiet ?? '?'} lần
+                          </div>
+                        </div>
+                        <BaseSpace wrap>
+                          <BaseTag color={trangThaiColor(x.trangThai)}>{x.trangThai}</BaseTag>
+                          {x.trangThai === 'Đang điều trị' && (
+                            <BaseWritable>
+                              <BaseButton
+                                size="small"
+                                icon={<RetweetIcon />}
+                                onClick={() => go(`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`)}
+                              >
+                                Tạo lượt chữa
+                              </BaseButton>
+                            </BaseWritable>
+                          )}
+                        </BaseSpace>
                       </div>
-                    </div>
-                    <BaseSpace>
-                      <BaseTag color={trangThaiColor(x.trangThai)}>{x.trangThai}</BaseTag>
-                      {x.trangThai === 'Đang điều trị' && (
-                        <BaseWritable>
-                          <BaseButton
-                            size="small"
-                            icon={<RetweetIcon />}
-                            onClick={() => go(`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`)}
+
+                      {/* Danh sách các lượt chữa tương ứng của đợt này */}
+                      {kham && (
+                        <div style={{ marginTop: 10, background: '#fff', borderRadius: 6, border: '1px solid #f0f0f0', overflow: 'hidden' }}>
+                          <div
+                            style={{
+                              padding: '6px 12px',
+                              background: '#f9f9f9',
+                              borderBottom: '1px solid #f0f0f0',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: 'rgba(0, 0, 0, 0.75)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                            }}
                           >
-                            Tạo lượt chữa
-                          </BaseButton>
-                        </BaseWritable>
+                            <span>Lượt chữa của đợt này ({cacLuotChuaCuaDot.length})</span>
+                            {cacLuotChuaCuaDot.length > 0 && (
+                              <span className="muted" style={{ fontWeight: 400 }}>
+                                Tổng tiền chữa: {money(cacLuotChuaCuaDot.reduce((s, c) => s + c.tongTien, 0))}
+                              </span>
+                            )}
+                          </div>
+                          {cacLuotChuaCuaDot.length === 0 ? (
+                            <div className="muted" style={{ padding: '12px', textAlign: 'center', fontSize: 12 }}>
+                              Chưa có lượt chữa nào cho đợt này
+                            </div>
+                          ) : (
+                            <BaseTable<Luot>
+                              rowKey="maLuot"
+                              size="small"
+                              columns={luotChuaColumns}
+                              dataSource={cacLuotChuaCuaDot}
+                              pagination={false}
+                            />
+                          )}
+                        </div>
                       )}
-                    </BaseSpace>
-                  </li>
-                ))}
-              </ul>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </BaseCard>
-
-          {kham && dot.length > 0 && (
-            <BaseCard size="small" title={`Các lượt chữa của những đợt này (${d.luotChua.length})`} style={{ marginBottom: 16 }} styles={{ body: { padding: 0 } }}>
-              <BaseTable<Luot>
-                rowKey="maLuot"
-                size="small"
-                columns={luotChuaColumns}
-                dataSource={d.luotChua}
-                pagination={false}
-                locale={{ emptyText: 'Chưa có lượt chữa nào' }}
-              />
-            </BaseCard>
-          )}
 
           <BaseTable<ChiPhi>
             rowKey={(c) => `${c.loai}-${c.ma}`}
@@ -413,6 +518,57 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
           />
         )}
       </BaseFormModal>
+
+      <BaseFormModal<ChanDoanInput>
+        open={themDotOpen}
+        title={`Thêm chẩn đoán & đợt điều trị · ${l?.maLuot ?? ''}`}
+        okText="Thêm đợt"
+        form={formThemDot}
+        onSubmit={(v) => themDot.mutate(v)}
+        onCancel={() => setThemDotOpen(false)}
+        loading={themDot.isPending}
+        error={themDot.error}
+      >
+        <BaseFormItem
+          name="maBenh"
+          label="Bệnh chẩn đoán"
+          rules={[{ required: true, message: 'Chọn bệnh chẩn đoán' }]}
+        >
+          <BaseSelect
+            showSearch={{ optionFilterProp: 'label' }}
+            placeholder="Chọn bệnh trong danh mục"
+            options={benhOptions}
+            loading={benhList.isLoading}
+          />
+        </BaseFormItem>
+        <BaseRow gutter={16}>
+          <BaseCol span={12}>
+            <BaseFormItem
+              name="mucDo"
+              label="Mức độ"
+              rules={[{ required: true, message: 'Chọn mức độ bệnh' }]}
+            >
+              <BaseSelect options={MUC_DO.map((m) => ({ value: m, label: m }))} />
+            </BaseFormItem>
+          </BaseCol>
+          <BaseCol span={12}>
+            <BaseFormItem
+              name="soLanChuaCanThiet"
+              label="Số lần chữa cần thiết"
+              rules={[
+                { required: true, message: 'Nhập số lần chữa' },
+                { type: 'number', min: 1, message: 'Số lần chữa ≥ 1 (BR8)' },
+              ]}
+            >
+              <BaseNumberInput min={1} precision={0} style={{ width: '100%' }} />
+            </BaseFormItem>
+          </BaseCol>
+        </BaseRow>
+        <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
+          Hệ thống sẽ mở một đợt điều trị mới (<code>CDDT-{l?.maKhoa?.slice(0, 3) || 'CNx'}-...</code>) với trạng thái "Đang điều trị" và cập nhật vào kết luận khám nếu cần.
+        </div>
+      </BaseFormModal>
+
     </BaseDrawer>
   )
 }

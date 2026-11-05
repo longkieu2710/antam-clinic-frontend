@@ -97,7 +97,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
         </>
       ),
     },
-    { title: 'Bắt đầu', dataIndex: 'ngayBatDau', render: dateTimeVN, width: 150 },
+    { title: 'Bắt đầu', dataIndex: 'ngayBatDau', render: dateTimeVN, width: 170 },
     {
       title: 'Tiến trình',
       key: 'tien-trinh',
@@ -117,7 +117,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
         </>
       ),
     },
-    { title: 'Kết thúc', dataIndex: 'ngayKetThuc', render: dateTimeVN, width: 150 },
+    { title: 'Kết thúc', dataIndex: 'ngayKetThuc', render: dateTimeVN, width: 170 },
   ]
 
   const luotColumns: BaseColumns<LuotHoSo> = [
