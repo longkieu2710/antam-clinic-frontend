@@ -24,17 +24,12 @@ import type { BaseColumns } from '../components/common'
 import { useCrudMutations } from '../hooks/useCrudMutations'
 import { PageTitle } from '../layout/PageTitle'
 import { blankToNull, dateVN, money } from '../utils/format'
+import { TRANG_THAI_LUONG_CO_SO } from './luongCoSoUtils'
 
 interface FormValues {
   ngayApDung: Dayjs
   mucLuong: number
   vanBanQuyDinh?: string
-}
-
-const TRANG_THAI: Record<TrangThaiLuongCoSo, { label: string; color: string }> = {
-  DANG_AP_DUNG: { label: 'Đang áp dụng', color: 'green' },
-  SAP_AP_DUNG: { label: 'Sắp áp dụng', color: 'blue' },
-  DA_THAY_THE: { label: 'Đã thay thế', color: 'default' },
 }
 
 /**
@@ -80,7 +75,9 @@ export function LuongCoSoPage() {
       title: 'Trạng thái',
       dataIndex: 'trangThai',
       width: 140,
-      render: (v: TrangThaiLuongCoSo) => <BaseTag color={TRANG_THAI[v].color}>{TRANG_THAI[v].label}</BaseTag>,
+      render: (v: TrangThaiLuongCoSo) => (
+        <BaseTag color={TRANG_THAI_LUONG_CO_SO[v].color}>{TRANG_THAI_LUONG_CO_SO[v].label}</BaseTag>
+      ),
     },
     {
       title: '',

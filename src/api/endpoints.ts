@@ -170,6 +170,7 @@ export const getTongQuan = (site: string) => api<TongQuan>('/api/tong-quan', { s
 // ---- Bản sao danh mục chung tại chi nhánh (đơn giá áp dụng khi lưu lượt — BR7)
 export const getBenhReplica = (site: string) => api<Benh[]>('/api/benh', { site })
 export const getDichVuReplica = (site: string) => api<DichVu[]>('/api/dich-vu', { site })
+export const getLuongCoSoReplica = (site: string) => api<LuongCoSo[]>('/api/luong-co-so', { site })
 
 // ---- Toàn chuỗi (S0)
 // ---- Trung tâm xem toàn chuỗi (view toàn cục ở S0, mỗi dòng có maCn)

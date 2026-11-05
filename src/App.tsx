@@ -1,14 +1,17 @@
 import { Route, Routes } from 'react-router'
 import { AppLayout } from './layout/AppLayout'
 import { BacSiPage } from './pages/BacSiPage'
+import { BenhChiNhanhPage } from './pages/BenhChiNhanhPage'
 import { BenhNhanPage } from './pages/BenhNhanPage'
 import { BenhPage } from './pages/BenhPage'
 import { ChiNhanhPage } from './pages/ChiNhanhPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { DichVuChiNhanhPage } from './pages/DichVuChiNhanhPage'
 import { DichVuPage } from './pages/DichVuPage'
 import { DoanhThuPage } from './pages/DoanhThuPage'
 import { HoSoBenhNhanPage } from './pages/HoSoBenhNhanPage'
 import { KhoaPage } from './pages/KhoaPage'
+import { LuongCoSoChiNhanhPage } from './pages/LuongCoSoChiNhanhPage'
 import { LuongCoSoPage } from './pages/LuongCoSoPage'
 import { LuongPage } from './pages/LuongPage'
 import { LuotChuaPage } from './pages/LuotChuaPage'
@@ -43,6 +46,9 @@ export default function App() {
         <Route path="khoa" element={<KhoaPage />} />
         <Route path="thiet-bi" element={<ThietBiPage />} />
         <Route path="thuoc-chi-nhanh" element={<ThuocChiNhanhPage />} />
+        <Route path="benh-chi-nhanh" element={<BenhChiNhanhPage />} />
+        <Route path="dich-vu-chi-nhanh" element={<DichVuChiNhanhPage />} />
+        <Route path="luong-co-so-chi-nhanh" element={<LuongCoSoChiNhanhPage />} />
         {/* Báo cáo chi nhánh — F2..F5 */}
         <Route path="bc-benh" element={<ThongKeBenhPage />} />
         <Route path="bc-luong" element={<LuongPage />} />

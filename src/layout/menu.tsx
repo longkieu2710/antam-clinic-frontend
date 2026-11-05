@@ -74,6 +74,9 @@ export const MENU: MenuGroup[] = [
       { path: '/khoa', label: 'Khoa', icon: <ApartmentIcon />, done: true },
       { path: '/thiet-bi', label: 'Thiết bị', icon: <ToolIcon />, done: true },
       { path: '/thuoc-chi-nhanh', label: 'Thuốc (bản sao)', icon: <ExperimentIcon />, done: true, hqApp: false },
+      { path: '/benh-chi-nhanh', label: 'Bệnh (bản sao)', icon: <HeartIcon />, done: true, hqApp: false },
+      { path: '/dich-vu-chi-nhanh', label: 'Dịch vụ y tế (bản sao)', icon: <SolutionIcon />, done: true, hqApp: false },
+      { path: '/luong-co-so-chi-nhanh', label: 'Lương cơ sở (bản sao)', icon: <AccountBookIcon />, done: true, hqApp: false },
     ],
   },
   {
