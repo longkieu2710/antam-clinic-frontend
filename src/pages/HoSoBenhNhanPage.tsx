@@ -34,7 +34,13 @@ import { age, dateTimeVN, dateVN, money } from '../utils/format'
 import { LuotDetailDrawer } from './luot/LuotDetailDrawer'
 import { LUOT_QUERY_KEYS, trangThaiColor } from './luot/luotUtils'
 
-const LOAI_CHI_PHI: Record<ChiPhi['loai'], string> = { DICH_VU: 'Dịch vụ', THUOC: 'Thuốc', THIET_BI: 'Thiết bị' }
+const LOAI_CHI_PHI: Record<string, string> = {
+  DICH_VU: 'Dịch vụ',
+  DV: 'Dịch vụ',
+  THUOC: 'Thuốc',
+  THIET_BI: 'Thiết bị',
+  TB: 'Thiết bị',
+}
 
 interface Props {
   /** true: hồ sơ toàn chuỗi — /api/hq/** chạy ở S0, gộp dữ liệu 3 chi nhánh qua view toàn cục */
@@ -179,7 +185,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
   ]
 
   const chiPhiColumns: BaseColumns<ChiPhi> = [
-    { title: 'Loại', dataIndex: 'loai', width: 100, render: (v: ChiPhi['loai']) => LOAI_CHI_PHI[v] },
+    { title: 'Loại', dataIndex: 'loai', width: 100, render: (v: string) => LOAI_CHI_PHI[v] ?? v ?? '—' },
     { title: 'Khoản', dataIndex: 'ten', render: (v: string, r) => <>{v} {r.ghiChu && <span className="muted">· {r.ghiChu}</span>}</> },
     { title: 'SL', dataIndex: 'soLuong', align: 'right', width: 70 },
     { title: 'Đơn giá áp dụng', dataIndex: 'donGia', align: 'right', render: money, width: 140 },
