@@ -62,7 +62,7 @@ export function ChiNhanhPage() {
       title: 'Trạm (application.yml)',
       render: (_, r) => (
         <code>
-          {r.site} · {r.jdbcUrl.replace('jdbc:postgresql://', '')}
+          {r.site} · {r.jdbcUrl ? r.jdbcUrl.replace('jdbc:postgresql://', '') : '—'}
         </code>
       ),
     },

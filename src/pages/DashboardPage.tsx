@@ -84,6 +84,10 @@ export function DashboardPage() {
 }
 
 function SiteCard({ status: s }: { status: SiteStatus }) {
+  const displayAddress = s.jdbcUrl
+    ? s.jdbcUrl.replace('jdbc:postgresql://', '')
+    : (s.database ?? `${s.site} DB`)
+
   return (
     <BaseCard
       title={
@@ -93,8 +97,8 @@ function SiteCard({ status: s }: { status: SiteStatus }) {
       }
       extra={<BaseTag color={s.role === 'HUB' ? 'orange' : 'green'}>{s.role === 'HUB' ? 'Trung tâm' : s.maCn}</BaseTag>}
     >
-      <BaseText type="secondary" style={{ fontSize: 12 }} copyable={{ text: s.jdbcUrl }}>
-        <code>{s.jdbcUrl.replace('jdbc:postgresql://', '')}</code>
+      <BaseText type="secondary" style={{ fontSize: 12 }} copyable={s.jdbcUrl ? { text: s.jdbcUrl } : undefined}>
+        <code>{displayAddress}</code>
       </BaseText>
       {s.up ? (
         <BaseDescriptions
@@ -102,7 +106,7 @@ function SiteCard({ status: s }: { status: SiteStatus }) {
           style={{ marginTop: 12 }}
           items={[
             { key: 'db', label: 'Database', children: s.database },
-            { key: 'ms', label: 'Độ trễ', children: `${s.latencyMs} ms` },
+            { key: 'ms', label: 'Độ trễ', children: s.latencyMs != null ? `${s.latencyMs} ms` : '—' },
             ...Object.entries(s.counts ?? {}).map(([label, value]) => ({ key: label, label, children: value })),
           ]}
         />
