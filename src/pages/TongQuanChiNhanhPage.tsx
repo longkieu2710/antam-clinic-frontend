@@ -97,7 +97,7 @@ export function TongQuanChiNhanhPage() {
         <BaseCol xs={12} lg={6}>
           <BaseCard style={{ height: '100%' }}>
             <BaseStatistic title="Đợt đang điều trị" value={d?.dotDangDieuTri ?? 0} loading={query.isLoading} />
-            <div className="muted">{d?.quaHan.length ?? 0} đợt quá 30 ngày chưa quay lại</div>
+            <div className="muted">{d?.quaHan?.length ?? 0} đợt quá 30 ngày chưa quay lại</div>
           </BaseCard>
         </BaseCol>
         <BaseCol xs={12} lg={6}>
@@ -131,7 +131,7 @@ export function TongQuanChiNhanhPage() {
         </BaseCol>
         <BaseCol xs={24} xl={10}>
           <BaseCard title="Lịch hẹn tái khám sắp tới" style={{ marginBottom: 16 }}>
-            {d && d.lichHen.length === 0 ? (
+            {d && (d.lichHen?.length ?? 0) === 0 ? (
               <BaseEmpty description="Không có lịch hẹn" />
             ) : (
               <ul className="list-plain">
@@ -157,10 +157,10 @@ export function TongQuanChiNhanhPage() {
             )}
           </BaseCard>
 
-          {d && d.quaHan.length > 0 && (
+          {d && (d.quaHan?.length ?? 0) > 0 && (
             <BaseCard title="Đợt quá 30 ngày chưa quay lại (BR12)" style={{ marginBottom: 16 }}>
               <ul className="list-plain">
-                {d.quaHan.map((x) => (
+                {(d.quaHan ?? []).map((x) => (
                   <li key={x.maCDDT}>
                     <div>
                       <b>{x.tenBN}</b>
@@ -183,7 +183,7 @@ export function TongQuanChiNhanhPage() {
           )}
 
           <BaseCard title="Bệnh mắc nhiều nhất tháng này" extra={<Link to="/bc-benh">Chi tiết →</Link>}>
-            {d && d.topBenh.length === 0 ? (
+            {d && (d.topBenh?.length ?? 0) === 0 ? (
               <BaseEmpty description="Chưa có chẩn đoán trong tháng" />
             ) : (
               (d?.topBenh ?? []).map((b) => (
