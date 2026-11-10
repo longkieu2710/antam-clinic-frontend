@@ -38,6 +38,8 @@ import type {
   TongQuan,
   ThuocRequest,
   TiepDon,
+  HoaDonItem,
+  HoaDonDetail,
   YTa,
   YTaRequest,
 } from './types'
@@ -188,3 +190,20 @@ export const getDoanhThuToanChuoi = (tu: string, den: string) =>
   api<DoanhThuToanChuoi>('/api/hq/doanh-thu', { query: { tu, den } })
 export const getThongKeBenhToanChuoi = (thang: string) =>
   api<ThongKeBenhToanChuoi>('/api/hq/thong-ke-benh', { query: { thang } })
+
+// ---- Hóa đơn & Thanh toán (v2)
+export const getHoaDon = (site: string, query?: Record<string, string | undefined>) =>
+  api<HoaDonItem[]>('/api/hoa-don', { site, query })
+
+export const getHoaDonDetail = (site: string, maHD: string) =>
+  api<HoaDonDetail>(`/api/hoa-don/${encodeURIComponent(maHD)}`, { site })
+
+export const createPayment = (
+  site: string,
+  maHD: string,
+  body: { soTien: number; hinhThuc: string }
+) =>
+  api<{ maHD: string; soTienPhaiTra: number; daThu: number; conThieu: number; trangThai: string; message: string }>(
+    `/api/hoa-don/${encodeURIComponent(maHD)}/thanh-toan`,
+    { site, method: 'POST', body }
+  )

@@ -14,8 +14,8 @@ export default defineConfig({
     },
   },
   build: {
-    // Đóng gói: build thẳng vào static của backend → ./mvnw package ra 1 file jar chứa cả FE
-    outDir: '../backend/src/main/resources/static',
+    // Đóng gói: build thẳng vào public của backend ExpressJS
+    outDir: '../backend/public',
     emptyOutDir: true,
     chunkSizeWarningLimit: 1500,
   },

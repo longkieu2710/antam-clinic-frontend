@@ -10,6 +10,7 @@ import { DichVuChiNhanhPage } from './pages/DichVuChiNhanhPage'
 import { DichVuPage } from './pages/DichVuPage'
 import { DoanhThuPage } from './pages/DoanhThuPage'
 import { HoSoBenhNhanPage } from './pages/HoSoBenhNhanPage'
+import { HoaDonPage } from './pages/HoaDonPage'
 import { KhoaPage } from './pages/KhoaPage'
 import { LuongCoSoChiNhanhPage } from './pages/LuongCoSoChiNhanhPage'
 import { LuongCoSoPage } from './pages/LuongCoSoPage'
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="luot-kham-moi" element={<LuotKhamPage />} />
         <Route path="luot-chua-moi" element={<LuotChuaPage />} />
         <Route path="luot" element={<LuotPage />} />
+        <Route path="hoa-don" element={<HoaDonPage />} />
         {/* Danh mục chi nhánh (X-Site) — F1 */}
         <Route path="bac-si" element={<BacSiPage />} />
         <Route path="y-ta" element={<YTaPage />} />

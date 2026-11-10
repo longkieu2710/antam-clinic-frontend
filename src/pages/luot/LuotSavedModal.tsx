@@ -32,13 +32,16 @@ export function LuotSavedModal({ saved, onClose }: Props) {
       onCancel={onClose}
       width={640}
       footer={[
+        <BaseButton key="pay" type="primary" onClick={() => go(`/hoa-don?q=${encodeURIComponent(saved.maLuot)}`)}>
+          Thanh toán viện phí
+        </BaseButton>,
         <BaseButton key="list" onClick={() => go(`/luot?ma=${encodeURIComponent(saved.maLuot)}`)}>
           Xem lượt vừa tạo
         </BaseButton>,
         <BaseButton key="ho-so" onClick={() => go(`/ho-so?maBN=${encodeURIComponent(saved.maBN)}`)}>
           Hồ sơ bệnh nhân
         </BaseButton>,
-        <BaseButton key="new" type="primary" onClick={onClose}>
+        <BaseButton key="new" onClick={onClose}>
           {kham ? 'Tạo lượt khám khác' : 'Tạo lượt chữa khác'}
         </BaseButton>,
       ]}

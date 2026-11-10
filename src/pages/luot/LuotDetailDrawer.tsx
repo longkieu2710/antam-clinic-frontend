@@ -32,6 +32,7 @@ import {
   BaseTextArea,
   BaseTooltip,
   BaseWritable,
+  DollarIcon,
   ProfileIcon,
   RetweetIcon,
   useBaseForm,
@@ -248,6 +249,15 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
       extra={
         d && (
           <BaseSpace>
+            {l && (
+              <BaseButton
+                type="primary"
+                icon={<DollarIcon />}
+                onClick={() => go(`/hoa-don?q=${encodeURIComponent(l.maLuot)}`)}
+              >
+                Viện phí
+              </BaseButton>
+            )}
             {l?.maBN && (
               <BaseButton icon={<ProfileIcon />} onClick={() => go(`/ho-so?maBN=${encodeURIComponent(l.maBN!)}`)}>
                 Hồ sơ

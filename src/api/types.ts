@@ -639,3 +639,45 @@ export interface TongQuan {
   quaHan: DotDieuTri[]
   topBenh: ThongKeBenhItem[]
 }
+
+
+// ---- Hóa đơn & Thanh toán (v2 Spec)
+
+export type TrangThaiHoaDon = 'Chưa trả' | 'Trả một phần' | 'Đã trả'
+
+export interface HoaDonItem {
+  maHD: string
+  ngayLap: string
+  giamTru: number
+  maPhieu: string
+  loaiPhieu: 'KHAM' | 'DIEU_TRI'
+  tongTien: number
+  soTienPhaiTra: number
+  daThu: number
+  conThieu: number
+  trangThai: TrangThaiHoaDon
+  maBN: string
+  tenBN: string
+  tenBS: string
+  soDienThoai?: string
+}
+
+export interface LanThanhToanItem {
+  stt: number
+  thoiGian: string
+  soTien: number
+  hinhThuc: 'Tiền mặt' | 'Chuyển khoản' | 'Thẻ'
+}
+
+export interface HoaDonDetail {
+  hoaDon: HoaDonItem
+  lanThanhToan: LanThanhToanItem[]
+  chiTietChiPhi: {
+    loaiChiPhi: string
+    maMatHang: string
+    tenMatHang: string
+    soLuong: number
+    donGia: number
+    thanhTien: number
+  }[]
+}

@@ -63,6 +63,7 @@ export const MENU: MenuGroup[] = [
       { path: '/luot-kham-moi', label: 'Tạo lượt khám', icon: <FileAddIcon />, done: true, hqApp: false },
       { path: '/luot-chua-moi', label: 'Tạo lượt chữa', icon: <RetweetIcon />, done: true, hqApp: false },
       { path: '/luot', label: 'Danh sách lượt khám', icon: <ListIcon />, done: true, hqApp: false },
+      { path: '/hoa-don', label: 'Hóa đơn & Viện phí', icon: <WalletIcon />, done: true, hqApp: false },
     ],
   },
   {
