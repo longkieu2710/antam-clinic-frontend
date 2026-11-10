@@ -43,11 +43,9 @@ import type { BaseColumns } from '../../components/common'
 import { blankToNull, dateTimeVN, dateVN, money } from '../../utils/format'
 import { KHOI, LUOT_QUERY_KEYS, MUC_DO, THUONG_DOT_KHOI, TINH_TRANG, trangThaiColor } from './luotUtils'
 
-const LOAI_CHI_PHI: Record<string, { label: string; color: string }> = {
-  DICH_VU: { label: 'Dịch vụ', color: 'blue' },
+const LOAI_CHI_PHI: Record<ChiPhi['loai'], { label: string; color: string }> = {
   DV: { label: 'Dịch vụ', color: 'blue' },
   THUOC: { label: 'Thuốc', color: 'green' },
-  THIET_BI: { label: 'Thiết bị', color: 'orange' },
   TB: { label: 'Thiết bị', color: 'orange' },
 }
 
@@ -177,15 +175,7 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
   const khoiSua = tinhTrangSua === KHOI
 
   const columns: BaseColumns<ChiPhi> = [
-    {
-      title: 'Loại',
-      dataIndex: 'loai',
-      width: 100,
-      render: (v: string) => {
-        const item = LOAI_CHI_PHI[v] ?? { label: v || 'Khác', color: 'default' }
-        return <BaseTag color={item.color}>{item.label}</BaseTag>
-      },
-    },
+    { title: 'Loại', dataIndex: 'loai', width: 100, render: (v: ChiPhi['loai']) => <BaseTag color={LOAI_CHI_PHI[v].color}>{LOAI_CHI_PHI[v].label}</BaseTag> },
     { title: 'Khoản', dataIndex: 'ten', render: (v: string, r) => <>{v} {r.ghiChu && <span className="muted">· {r.ghiChu}</span>}</> },
     { title: 'SL', dataIndex: 'soLuong', align: 'right', width: 60 },
     { title: 'Đơn giá áp dụng', dataIndex: 'donGia', align: 'right', render: money, width: 130 },

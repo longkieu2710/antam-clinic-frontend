@@ -356,7 +356,7 @@ export interface DotDieuTri {
 
 export interface ChiPhi {
   maLuot: string
-  loai: 'DICH_VU' | 'THUOC' | 'THIET_BI'
+  loai: 'DV' | 'THUOC' | 'TB'
   ma: string
   ten: string
   ghiChu: string | null
