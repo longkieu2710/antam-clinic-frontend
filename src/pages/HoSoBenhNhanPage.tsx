@@ -242,7 +242,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
               <BaseCard style={{ height: '100%' }}>
                 <BaseStatistic title="Tổng chi phí khám chữa" value={money(data.tongChiPhi)} />
                 <div className="muted" style={{ marginTop: 8 }}>
-                  {data.luot.length} lượt · {data.dotDieuTri.length} đợt điều trị
+                  {(data.luot ?? []).length} lượt · {(data.dotDieuTri ?? []).length} đợt điều trị
                 </div>
               </BaseCard>
             </BaseCol>
@@ -294,7 +294,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
           </BaseCard>
 
           <BaseCard title="Các đợt điều trị · CHAN_DOAN_DIEU_TRI" style={{ marginBottom: 16 }}>
-            <BaseTable<DotDieuTri> rowKey="maCDDT" unit="đợt" columns={dotColumns} dataSource={data.dotDieuTri} pagination={false} scroll={{ x: 900 }} />
+            <BaseTable<DotDieuTri> rowKey="maCDDT" unit="đợt" columns={dotColumns} dataSource={data.dotDieuTri ?? []} pagination={false} scroll={{ x: 900 }} />
           </BaseCard>
 
           <BaseCard title="Lượt khám / chữa (mới nhất trước) — bấm ▸ để xem chi tiết chi phí">
@@ -302,22 +302,22 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
               rowKey="maLuot"
               unit="lượt"
               columns={luotColumns}
-              dataSource={data.luot}
+              dataSource={data.luot ?? []}
               scroll={{ x: 1100 }}
               expandable={{
-                rowExpandable: (r) => r.chiTiet.length > 0,
+                rowExpandable: (r) => (r.chiTiet ?? []).length > 0,
                 expandedRowRender: (r) => (
                   <BaseTable<ChiPhi>
                     rowKey={(c) => `${c.loai}-${c.ma}`}
                     size="small"
                     columns={chiPhiColumns}
-                    dataSource={r.chiTiet}
+                    dataSource={r.chiTiet ?? []}
                     pagination={false}
                   />
                 ),
               }}
               summary={() =>
-                data.luot.length > 0 && (
+                (data.luot ?? []).length > 0 && (
                   <BaseSummaryRow>
                     <BaseSummaryCell index={0} colSpan={7}>
                       <strong>Tổng chi phí</strong>
