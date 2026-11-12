@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useState } from 'react'
 import { getDoanhThuToanChuoi } from '../api/endpoints'
-import type { DoanhThu, DoanhThuChiNhanh, DoanhThuChiTiet } from '../api/types'
+import type { DoanhThuChiNhanh, DoanhThuChiTiet } from '../api/types'
 import {
   BaseAlert,
   BaseCard,
@@ -42,14 +42,8 @@ export function TcDoanhThuPage() {
   const den = range[1].format('YYYY-MM-DD')
   const query = useQuery({ queryKey: ['doanh-thu', 'tc', tu, den], queryFn: () => getDoanhThuToanChuoi(tu, den), retry: false })
   const data = query.data
-  const tong = data?.tongHop || (data as unknown as { tongCong?: DoanhThu })?.tongCong
-  const chiNhanhRaw = data?.chiNhanh && data.chiNhanh.length > 0 ? data.chiNhanh : ((data as unknown as { theoChiNhanh?: DoanhThuChiNhanh[] })?.theoChiNhanh ?? [])
-  const chiNhanh: DoanhThuChiNhanh[] = chiNhanhRaw.map((c) => ({
-    ...c,
-    tienKham: c.tienKham ?? 0,
-    tong: c.tong ?? (c as unknown as { tongDoanhThu?: number }).tongDoanhThu ?? 0,
-    tyTrong: c.tyTrong ?? 0,
-  }))
+  const tong = data?.tongHop
+  const chiNhanh = data?.chiNhanh ?? []
   const max = Math.max(1, ...chiNhanh.map((c) => c.tong))
 
   // Bảng tháng × chi nhánh
@@ -57,9 +51,9 @@ export function TcDoanhThuPage() {
   const thangRows: ThangRow[] = thang.map((t) => {
     const row: ThangRow = { thang: t }
     chiNhanh.forEach((c) => {
-      row[c.maCn] = data?.theoThangChiNhanh?.find((r) => r.thang === t && r.maCn === c.maCn)?.tong ?? 0
+      row[c.maCn] = data!.theoThangChiNhanh.find((r) => r.thang === t && r.maCn === c.maCn)?.tong ?? 0
     })
-    row.tong = chiNhanh.reduce((s, c) => s + ((row[c.maCn] as number) || 0), 0)
+    row.tong = chiNhanh.reduce((s, c) => s + (row[c.maCn] as number), 0)
     return row
   })
 
@@ -70,7 +64,7 @@ export function TcDoanhThuPage() {
     { title: 'Dịch vụ y tế', dataIndex: 'tienDichVu', align: 'right', render: money },
     { title: 'Thuốc', dataIndex: 'tienThuoc', align: 'right', render: money },
     { title: 'Thiết bị', dataIndex: 'tienThietBi', align: 'right', render: money },
-    { title: 'Doanh thu', dataIndex: 'tong', align: 'right', render: (v: number, c) => <strong>{money(c.tong ?? v)}</strong> },
+    { title: 'Doanh thu', dataIndex: 'tong', align: 'right', render: (v: number) => <strong>{money(v)}</strong> },
     {
       title: 'Tỉ trọng',
       key: 'ty-trong',
@@ -86,12 +80,7 @@ export function TcDoanhThuPage() {
   ]
 
   const chiTietColumns: BaseColumns<DoanhThuChiTiet> = [
-    {
-      title: 'Loại',
-      dataIndex: 'loai',
-      width: 110,
-      render: (v: DoanhThuChiTiet['loai']) => <BaseTag color={LOAI[v]?.color ?? 'default'}>{LOAI[v]?.label ?? v}</BaseTag>,
-    },
+    { title: 'Loại', dataIndex: 'loai', width: 110, render: (v: DoanhThuChiTiet['loai']) => <BaseTag color={LOAI[v].color}>{LOAI[v].label}</BaseTag> },
     { title: 'Khoản thu', dataIndex: 'ten', render: (v: string, r) => <>{v} <span className="muted">· {r.nhom ?? r.ma}</span></> },
     { title: 'Số lượng', dataIndex: 'soLuong', align: 'right', width: 110 },
     { title: 'Doanh thu', dataIndex: 'soTien', align: 'right', render: money, width: 150 },
