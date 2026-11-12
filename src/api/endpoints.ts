@@ -18,6 +18,7 @@ import type {
   DoanhThuToanChuoi,
   DotDieuTri,
   HoSoBenhNhan,
+  PhieuKhamGocSummary,
   Khoa,
   KhoaRequest,
   LuongCoSo,
@@ -42,6 +43,14 @@ import type {
   HoaDonDetail,
   YTa,
   YTaRequest,
+  ApiOverviewStats,
+  ApiLogEntry,
+  TopSlowApi,
+  TopErrorApi,
+  InvoiceMongoOverview,
+  InvoiceBranchStat,
+  PaymentMethodStat,
+  TopDebtor,
 } from './types'
 
 // ---- Hệ thống (không cần X-Site)
@@ -165,6 +174,8 @@ export const suaLuotChua = (site: string, maLuot: string, body: SuaLuotChuaReque
   api<LuotChiTiet>(`/api/luot-chua/${encodeURIComponent(maLuot)}`, { site, method: 'PUT', body })
 export const getDotDangDieuTri = (site: string, maBN: string) =>
   api<DotDieuTri[]>(`/api/benh-nhan/${encodeURIComponent(maBN)}/dot-dang-dieu-tri`, { site })
+export const getPhieuKhamGoc = (site: string, maBN: string) =>
+  api<PhieuKhamGocSummary[]>(`/api/benh-nhan/${encodeURIComponent(maBN)}/phieu-kham-goc`, { site })
 export const ngungDieuTri = (site: string, maCDDT: string) =>
   api<DotDieuTri>(`/api/dot-dieu-tri/${encodeURIComponent(maCDDT)}/ngung`, { site, method: 'PUT' })
 export const getTongQuan = (site: string) => api<TongQuan>('/api/tong-quan', { site })
@@ -207,3 +218,18 @@ export const createPayment = (
     `/api/hoa-don/${encodeURIComponent(maHD)}/thanh-toan`,
     { site, method: 'POST', body }
   )
+
+// ---- MongoDB & Kafka Analytics (Giám sát API & Bản sao Hóa đơn)
+export const getApiOverview = () => api<ApiOverviewStats>('/api/analytics/api-logs/overview')
+export const getRecentApiLogs = (query?: Record<string, string | null | undefined>) =>
+  api<{ data: ApiLogEntry[]; total: number }>('/api/analytics/api-logs/recent', { query })
+export const getTopSlowApis = () => api<TopSlowApi[]>('/api/analytics/api-logs/top-slow')
+export const getTopErrorApis = () => api<TopErrorApi[]>('/api/analytics/api-logs/top-errors')
+
+export const getInvoiceMongoOverview = () => api<InvoiceMongoOverview>('/api/analytics/invoices/overview')
+export const getInvoicesByBranchMongo = () => api<InvoiceBranchStat[]>('/api/analytics/invoices/by-branch')
+export const getPaymentMethodStatsMongo = () => api<PaymentMethodStat[]>('/api/analytics/invoices/payment-methods')
+export const getTopDebtorsMongo = () => api<TopDebtor[]>('/api/analytics/invoices/top-debtors')
+export const triggerBulkSyncInvoices = () =>
+  api<{ message: string; total: number; queuedToKafka: number; synced: number }>('/api/analytics/invoices/sync-all', { method: 'POST' })
+

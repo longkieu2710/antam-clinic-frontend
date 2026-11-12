@@ -10,10 +10,12 @@ interface Props {
   rows?: [ReactNode, ReactNode][]
   tien: TienLuot
   actions: ReactNode
+  /** Ẩn dòng thiết bị đối với lượt khám */
+  hideThietBi?: boolean
 }
 
 /** Thẻ tóm tắt ghim bên phải form lượt: thông tin chính + tạm tính tiền + nút Lưu / Huỷ. */
-export function LuotSummaryCard({ title, head, rows = [], tien, actions }: Props) {
+export function LuotSummaryCard({ title, head, rows = [], tien, actions, hideThietBi }: Props) {
   return (
     <div className="luot-sticky">
       <BaseCard title={title} actions={[<div key="a" style={{ padding: '0 16px', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>{actions}</div>]}>
@@ -32,15 +34,17 @@ export function LuotSummaryCard({ title, head, rows = [], tien, actions }: Props
           <span>Thuốc</span>
           <b>{money(tien.thuoc)}</b>
         </div>
-        <div className="sum-row">
-          <span>Thiết bị</span>
-          <b>{money(tien.thietBi)}</b>
-        </div>
+        {!hideThietBi && (
+          <div className="sum-row">
+            <span>Thiết bị</span>
+            <b>{money(tien.thietBi)}</b>
+          </div>
+        )}
         <div className="sum-row total">
           <span>Tổng tiền lượt</span>
           <span>{money(tien.tong)}</span>
         </div>
-        <div className="muted">Tạm tính theo đơn giá danh mục hiện tại; đơn giá áp dụng được lưu khi bấm Lưu (BR7).</div>
+        <div className="muted">Tạm tính theo đơn giá danh mục hiện tại; đơn giá áp dụng được lưu khi bấm Lưu.</div>
       </BaseCard>
     </div>
   )

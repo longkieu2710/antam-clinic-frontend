@@ -23,6 +23,7 @@ import { TcDoanhThuPage } from './pages/TcDoanhThuPage'
 import { TcThongKeBenhPage } from './pages/TcThongKeBenhPage'
 import { ThietBiPage } from './pages/ThietBiPage'
 import { ThongKeBenhPage } from './pages/ThongKeBenhPage'
+import { ThongKeAnalyticsPage } from './pages/ThongKeAnalyticsPage'
 import { ThuocChiNhanhPage } from './pages/ThuocChiNhanhPage'
 import { ThuocPage } from './pages/ThuocPage'
 import { TiepDonPage } from './pages/TiepDonPage'
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="bc-luong" element={<LuongPage />} />
         <Route path="ho-so" element={<HoSoBenhNhanPage />} />
         <Route path="bc-doanh-thu" element={<DoanhThuPage />} />
+        <Route path="thong-ke-analytics" element={<ThongKeAnalyticsPage />} />
         {/* Danh mục chung tại S0 — F1 */}
         <Route path="thuoc" element={<ThuocPage />} />
         <Route path="benh" element={<BenhPage />} />

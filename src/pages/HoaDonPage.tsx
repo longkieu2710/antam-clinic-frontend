@@ -202,7 +202,7 @@ export function HoaDonPage() {
     <div>
       <PageTitle
         title="Quản lý Hóa đơn & Viện phí"
-        description={`Cơ sở: ${branch?.tenCn ?? site} · Theo dõi viện phí và ghi nhận các đợt thanh toán (BR15, C18, C19)`}
+        description={`Cơ sở: ${branch?.tenCn ?? site} · Theo dõi viện phí và ghi nhận các đợt thanh toán`}
       />
 
       <BaseCard style={{ marginBottom: 16 }}>
@@ -299,9 +299,9 @@ export function HoaDonPage() {
                 { required: true, message: 'Vui lòng nhập số tiền' },
                 {
                   validator: async (_, val) => {
-                    if (val <= 0) throw new Error('Số tiền phải lớn hơn 0 (C9)')
+                    if (val <= 0) throw new Error('Số tiền phải lớn hơn 0')
                     if (val > payingHD.conThieu) {
-                      throw new Error(`Số tiền không được vượt quá số tiền còn thiếu ${money(payingHD.conThieu)} (C19)`)
+                      throw new Error(`Số tiền không được vượt quá số tiền còn thiếu ${money(payingHD.conThieu)}`)
                     }
                   },
                 },
@@ -404,7 +404,7 @@ export function HoaDonPage() {
             </BaseCard>
 
             <BaseCard
-              title="Lịch sử các lần thanh toán (C19)"
+              title="Lịch sử các lần thanh toán"
               size="small"
               extra={
                 detailData.hoaDon.conThieu > 0 && (

@@ -71,15 +71,15 @@ export const giaThuoc = (c: Catalogs, ma?: string) => c.thuoc.find((t) => t.maTh
 export const giaThietBi = (c: Catalogs, ma?: string) => c.thietBi.find((t) => t.maTB === ma)?.donGiaSuDung ?? 0
 
 /** Tạm tính theo đơn giá danh mục hiện tại (backend lấy lại đơn giá lúc lưu — BR7). */
-export function tinhTien(v: ChiTietFormValues, c: Catalogs): TienLuot {
+export function tinhTien(v: ChiTietFormValues, c: Catalogs, options?: { excludeThietBi?: boolean }): TienLuot {
   const dichVu = (v.dichVu ?? []).reduce((s, r) => s + (r?.soLuong ?? 0) * giaDichVu(c, r?.maDV), 0)
   const thuoc = (v.thuoc ?? []).reduce((s, r) => s + (r?.soLuong ?? 0) * giaThuoc(c, r?.maThuoc), 0)
-  const thietBi = (v.thietBi ?? []).reduce((s, r) => s + (r?.soLan ?? 0) * giaThietBi(c, r?.maTB), 0)
+  const thietBi = options?.excludeThietBi ? 0 : (v.thietBi ?? []).reduce((s, r) => s + (r?.soLan ?? 0) * giaThietBi(c, r?.maTB), 0)
   return { dichVu, thuoc, thietBi, tong: dichVu + thuoc + thietBi }
 }
 
 /** Giá trị form → phần chi tiết của request (bỏ dòng chưa chọn mã). */
-export function toChiTietInput(v: ChiTietFormValues): ChiTietLuotInput {
+export function toChiTietInput(v: ChiTietFormValues, options?: { excludeThietBi?: boolean }): ChiTietLuotInput {
   return {
     yTa: (v.yTa ?? []).map((maYT) => ({ maYT })),
     dichVu: (v.dichVu ?? [])
@@ -88,7 +88,7 @@ export function toChiTietInput(v: ChiTietFormValues): ChiTietLuotInput {
     thuoc: (v.thuoc ?? [])
       .filter((r) => r?.maThuoc)
       .map((r) => ({ maThuoc: r.maThuoc!, soLuong: r.soLuong ?? 1, lieuDung: blankToNull(r.lieuDung) })),
-    thietBi: (v.thietBi ?? []).filter((r) => r?.maTB).map((r) => ({ maTB: r.maTB!, soLan: r.soLan ?? 1 })),
+    thietBi: options?.excludeThietBi ? [] : (v.thietBi ?? []).filter((r) => r?.maTB).map((r) => ({ maTB: r.maTB!, soLan: r.soLan ?? 1 })),
   }
 }
 

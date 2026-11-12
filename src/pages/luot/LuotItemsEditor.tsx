@@ -20,20 +20,22 @@ import type { Catalogs, ChiTietFormValues } from './luotUtils'
 interface Props<T extends ChiTietFormValues> {
   form: BaseFormInstance<T>
   catalogs: Catalogs
+  /** Ẩn thẻ thiết bị (dành cho lượt khám - chỉ định theo quy định phiếu khám không dùng thiết bị) */
+  hideThietBi?: boolean
 }
 
 type TabKey = 'dichVu' | 'thuoc' | 'thietBi'
 
 /**
- * Ba thẻ Dịch vụ & nhân công · Kê đơn thuốc · Thiết bị — mỗi thẻ là một danh sách dòng (BaseFormList) ghi vào
+ * Các thẻ Dịch vụ & nhân công · Kê đơn thuốc · Thiết bị (tuỳ chọn) — mỗi thẻ là một danh sách dòng (BaseFormList) ghi vào
  * SU_DUNG_DV / KE_DON / SU_DUNG_TB. Đơn giá chỉ để xem; backend lấy đơn giá danh mục tại lúc lưu (BR7).
  */
-export function LuotItemsEditor<T extends ChiTietFormValues>({ form, catalogs }: Props<T>) {
+export function LuotItemsEditor<T extends ChiTietFormValues>({ form, catalogs, hideThietBi }: Props<T>) {
   const [tab, setTab] = useState<TabKey>('dichVu')
   const dichVu = useBaseWatch('dichVu', form) as ChiTietFormValues['dichVu']
   const thuoc = useBaseWatch('thuoc', form) as ChiTietFormValues['thuoc']
   const thietBi = useBaseWatch('thietBi', form) as ChiTietFormValues['thietBi']
-  const tien = tinhTien({ dichVu, thuoc, thietBi }, catalogs)
+  const tien = tinhTien({ dichVu, thuoc, thietBi: hideThietBi ? [] : thietBi }, catalogs, { excludeThietBi: hideThietBi })
 
   const label = (text: string, rows: unknown[] | undefined, amount: number) => (
     <span>
@@ -133,41 +135,45 @@ export function LuotItemsEditor<T extends ChiTietFormValues>({ form, catalogs }:
             </BaseFormList>
           ),
         },
-        {
-          key: 'thietBi',
-          label: label('Thiết bị', thietBi, tien.thietBi),
-          forceRender: true,
-          children: (
-            <BaseFormList name="thietBi">
-              {(fields, { add, remove }) => (
-                <>
-                  {fields.length > 0 && <Head cols={['Thiết bị', 'Số lần', 'Đơn giá', 'Thành tiền']} noExtra />}
-                  {fields.map((field) => {
-                    const row = thietBi?.[field.name]
-                    const gia = giaThietBi(catalogs, row?.maTB)
-                    return (
-                      <div className="item-row no-extra" key={field.key}>
-                        <BaseFormItem
-                          name={[field.name, 'maTB']}
-                          rules={[{ required: true, message: 'Chọn thiết bị' }, khongTrung('thietBi', 'maTB', 'Thiết bị')]}
-                        >
-                          <BaseSelect showSearch={{ optionFilterProp: 'label' }} placeholder="Chọn thiết bị" options={tbOptions} aria-label="Thiết bị" />
-                        </BaseFormItem>
-                        <BaseFormItem name={[field.name, 'soLan']} rules={[{ required: true, message: 'Nhập số lần' }]}>
-                          <BaseNumberInput min={1} precision={0} aria-label="Số lần" />
-                        </BaseFormItem>
-                        <div className="item-money muted">{row?.maTB ? money(gia) : '—'}</div>
-                        <div className="item-money">{row?.maTB ? money(gia * (row?.soLan ?? 0)) : '—'}</div>
-                        <BaseButton type="text" danger icon={<DeleteIcon />} aria-label="Xoá dòng" onClick={() => remove(field.name)} />
-                      </div>
-                    )
-                  })}
-                  <AddRow onAdd={() => add({ soLan: 1 })} table="SU_DUNG_TB" />
-                </>
-              )}
-            </BaseFormList>
-          ),
-        },
+        ...(!hideThietBi
+          ? [
+              {
+                key: 'thietBi' as const,
+                label: label('Thiết bị', thietBi, tien.thietBi),
+                forceRender: true,
+                children: (
+                  <BaseFormList name="thietBi">
+                    {(fields, { add, remove }) => (
+                      <>
+                        {fields.length > 0 && <Head cols={['Thiết bị', 'Số lần', 'Đơn giá', 'Thành tiền']} noExtra />}
+                        {fields.map((field) => {
+                          const row = thietBi?.[field.name]
+                          const gia = giaThietBi(catalogs, row?.maTB)
+                          return (
+                            <div className="item-row no-extra" key={field.key}>
+                              <BaseFormItem
+                                name={[field.name, 'maTB']}
+                                rules={[{ required: true, message: 'Chọn thiết bị' }, khongTrung('thietBi', 'maTB', 'Thiết bị')]}
+                              >
+                                <BaseSelect showSearch={{ optionFilterProp: 'label' }} placeholder="Chọn thiết bị" options={tbOptions} aria-label="Thiết bị" />
+                              </BaseFormItem>
+                              <BaseFormItem name={[field.name, 'soLan']} rules={[{ required: true, message: 'Nhập số lần' }]}>
+                                <BaseNumberInput min={1} precision={0} aria-label="Số lần" />
+                              </BaseFormItem>
+                              <div className="item-money muted">{row?.maTB ? money(gia) : '—'}</div>
+                              <div className="item-money">{row?.maTB ? money(gia * (row?.soLan ?? 0)) : '—'}</div>
+                              <BaseButton type="text" danger icon={<DeleteIcon />} aria-label="Xoá dòng" onClick={() => remove(field.name)} />
+                            </div>
+                          )
+                        })}
+                        <AddRow onAdd={() => add({ soLan: 1 })} table="SU_DUNG_TB" />
+                      </>
+                    )}
+                  </BaseFormList>
+                ),
+              },
+            ]
+          : []),
       ]}
     />
   )
@@ -186,14 +192,14 @@ function Head({ cols, noExtra }: { cols: string[]; noExtra?: boolean }) {
   )
 }
 
-function AddRow({ onAdd, table }: { onAdd: () => void; table: string }) {
+function AddRow({ onAdd }: { onAdd: () => void; table?: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
       <BaseButton icon={<AddIcon />} onClick={onAdd}>
         Thêm dòng
       </BaseButton>
       <BaseText type="secondary" style={{ fontSize: 12 }}>
-        Ghi vào <code>{table}</code> · đơn giá lấy từ danh mục tại lúc lưu (BR7)
+        Đơn giá áp dụng được tính tự động theo danh mục khi lưu.
       </BaseText>
     </div>
   )

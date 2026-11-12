@@ -239,7 +239,9 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
         l ? (
           <BaseSpace wrap>
             {mo.length > 0 && <BaseButton size="small" icon={<ArrowLeftIcon />} onClick={quayLai} aria-label="Quay lại" />}
-            <BaseTag color={kham ? 'blue' : 'purple'}>{kham ? 'Lượt khám' : `Lần chữa ${l.lanThu ?? '?'}`}</BaseTag>
+            <BaseTag color={kham ? (l.maPhieuGoc ? 'cyan' : 'blue') : 'purple'}>
+              {kham ? (l.maPhieuGoc ? 'Khám bổ sung' : 'Lượt khám') : `Lần chữa ${l.lanThu ?? '?'}`}
+            </BaseTag>
             <code>{l.maLuot}</code>
           </BaseSpace>
         ) : (
@@ -256,6 +258,14 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
                 onClick={() => go(`/hoa-don?q=${encodeURIComponent(l.maLuot)}`)}
               >
                 Viện phí
+              </BaseButton>
+            )}
+            {kham && !l?.maPhieuGoc && l?.maBN && (
+              <BaseButton
+                icon={<AddIcon />}
+                onClick={() => go(`/luot-kham-moi?maBN=${encodeURIComponent(l.maBN!)}&maPhieuGoc=${encodeURIComponent(l.maLuot)}`)}
+              >
+                Khám bổ sung
               </BaseButton>
             )}
             {l?.maBN && (
@@ -293,6 +303,24 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
       {query.isLoading && <BaseSkeleton paragraph={{ rows: 8 }} />}
       {d && l && (
         <>
+          {d.phieuGoc && (
+            <BaseAlert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              title="Khám bổ sung (C20)"
+              description={
+                <>
+                  Lượt khám này là khám bổ sung thuộc phiếu gốc{' '}
+                  <a onClick={() => xemLuot(d.phieuGoc!.maLuot)}>
+                    <code>{d.phieuGoc.maLuot}</code>
+                  </a>{' '}
+                  ({d.phieuGoc.tenKhoa} · BS {d.phieuGoc.tenBS})
+                </>
+              }
+            />
+          )}
+
           <BaseDescriptions
             column={{ xs: 1, sm: 2 }}
             size="small"
@@ -301,6 +329,20 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
               { key: 'bn', label: 'Bệnh nhân', children: l.tenBN ? `${l.tenBN} (${l.maBN})` : (l.maBN ?? '—') },
               { key: 'khoa', label: 'Khoa', children: l.tenKhoa ?? l.maKhoa },
               { key: 'bs', label: 'Bác sĩ', children: l.tenBS ?? l.maBS },
+              ...(l.maPhieuGoc
+                ? [
+                    {
+                      key: 'pg',
+                      label: 'Phiếu khám gốc',
+                      children: (
+                        <a onClick={() => xemLuot(l.maPhieuGoc!)}>
+                          <BaseTag color="cyan">Phiếu gốc</BaseTag>
+                          <code>{l.maPhieuGoc}</code>
+                        </a>
+                      ),
+                    },
+                  ]
+                : []),
               {
                 key: 'yt',
                 label: 'Y tá hỗ trợ',
@@ -325,6 +367,84 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
               ...(l.ghiChu ? [{ key: 'gc', label: 'Ghi chú', children: l.ghiChu, span: 2 }] : []),
             ]}
           />
+
+          {d.phieuBoSung && d.phieuBoSung.length > 0 && (
+            <BaseCard
+              size="small"
+              title={`Các lần khám bổ sung liên quan (${d.phieuBoSung.length})`}
+              extra={
+                <BaseButton
+                  size="small"
+                  type="link"
+                  icon={<AddIcon />}
+                  onClick={() => go(`/luot-kham-moi?maBN=${encodeURIComponent(l.maBN!)}&maPhieuGoc=${encodeURIComponent(l.maLuot)}`)}
+                >
+                  Thêm khám bổ sung
+                </BaseButton>
+              }
+              style={{ marginTop: 16 }}
+            >
+              <BaseTable<Luot>
+                rowKey="maLuot"
+                size="small"
+                pagination={false}
+                dataSource={d.phieuBoSung}
+                scroll={{ x: 945 }}
+                columns={[
+                  {
+                    title: 'Mã lượt',
+                    dataIndex: 'maLuot',
+                    width: 250,
+                    render: (v: string) => (
+                      <a onClick={() => xemLuot(v)} style={{ whiteSpace: 'nowrap', display: 'inline-block' }}>
+                        <code>{v}</code>
+                      </a>
+                    ),
+                  },
+                  {
+                    title: 'Thời gian',
+                    dataIndex: 'thoiGian',
+                    width: 150,
+                    render: (v: string) => <span style={{ whiteSpace: 'nowrap' }}>{dateTimeVN(v)}</span>,
+                  },
+                  {
+                    title: 'Khoa & Bác sĩ',
+                    width: 190,
+                    render: (_, r) => (
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{r.tenKhoa ?? r.maKhoa}</div>
+                        <div className="muted" style={{ fontSize: 12 }}>BS: {r.tenBS ?? r.maBS}</div>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: 'Lý do khám',
+                    dataIndex: 'lyDoKham',
+                    width: 160,
+                    ellipsis: true,
+                    render: (v: string | null) => v ?? <span className="muted">—</span>,
+                  },
+                  {
+                    title: 'Tổng tiền',
+                    dataIndex: 'tongTien',
+                    align: 'right',
+                    width: 110,
+                    render: (v: number) => <span style={{ whiteSpace: 'nowrap' }}>{money(v)}</span>,
+                  },
+                  {
+                    title: '',
+                    width: 85,
+                    align: 'right',
+                    render: (_, r) => (
+                      <BaseButton size="small" type="link" onClick={() => xemLuot(r.maLuot)} style={{ padding: 0 }}>
+                        Chi tiết →
+                      </BaseButton>
+                    ),
+                  },
+                ]}
+              />
+            </BaseCard>
+          )}
 
           <BaseCard
             size="small"
@@ -389,7 +509,7 @@ export function LuotDetailDrawer({ site, maLuot, onClose }: Props) {
                               <BaseButton
                                 size="small"
                                 icon={<RetweetIcon />}
-                                onClick={() => go(`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN)}&maCDDT=${encodeURIComponent(x.maCDDT)}`)}
+                                onClick={() => go(`/luot-chua-moi?maBN=${encodeURIComponent(x.maBN ?? d.luot.maBN ?? '')}&maCDDT=${encodeURIComponent(x.maCDDT)}`)}
                               >
                                 Tạo lượt chữa
                               </BaseButton>

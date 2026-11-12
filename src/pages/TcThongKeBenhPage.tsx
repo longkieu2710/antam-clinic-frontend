@@ -50,7 +50,7 @@ export function TcThongKeBenhPage() {
       key: cn,
       align: 'right' as const,
       width: 120,
-      render: (_: unknown, r: ThongKeBenhToanChuoiItem) => (r.theoChiNhanh[cn] ? r.theoChiNhanh[cn] : <span className="muted">0</span>),
+      render: (_: unknown, r: ThongKeBenhToanChuoiItem) => (r.theoChiNhanh?.[cn] ? r.theoChiNhanh[cn] : <span className="muted">0</span>),
     })),
     { title: 'Số bệnh nhân', dataIndex: 'soBenhNhan', align: 'right', width: 120 },
   ]
@@ -75,7 +75,7 @@ export function TcThongKeBenhPage() {
         {chiNhanh.map((cn) => (
           <BaseCol key={cn} xs={24} sm={8} md={6}>
             <BaseCard style={{ height: '100%' }}>
-              <BaseStatistic title={tenCn(cn)} value={data?.tongTheoChiNhanh[cn] ?? 0} suffix="lần mắc" valueStyle={{ fontSize: 20 }} />
+              <BaseStatistic title={tenCn(cn)} value={data?.tongTheoChiNhanh?.[cn] ?? 0} suffix="lần mắc" valueStyle={{ fontSize: 20 }} />
             </BaseCard>
           </BaseCol>
         ))}
@@ -89,25 +89,26 @@ export function TcThongKeBenhPage() {
         loading={query.isLoading}
         locale={{ emptyText: `Không có lượt khám/chữa nào có chẩn đoán bệnh trong tháng ${monthVN(thang)}` }}
         scroll={{ x: 800 }}
-        summary={() =>
-          data &&
-          data.benh.length > 0 && (
+        summary={() => {
+          const benhList = data?.benh ?? []
+          if (benhList.length === 0) return null
+          return (
             <BaseSummaryRow>
               <BaseSummaryCell index={0} colSpan={2}>
                 <strong>Tổng</strong>
               </BaseSummaryCell>
               <BaseSummaryCell index={2} align="right">
-                <strong>{data.tongLanMac}</strong>
+                <strong>{data?.tongLanMac ?? 0}</strong>
               </BaseSummaryCell>
               {chiNhanh.map((cn, i) => (
                 <BaseSummaryCell key={cn} index={3 + i} align="right">
-                  {data.tongTheoChiNhanh[cn]}
+                  {data?.tongTheoChiNhanh?.[cn] ?? 0}
                 </BaseSummaryCell>
               ))}
               <BaseSummaryCell index={3 + chiNhanh.length} />
             </BaseSummaryRow>
           )
-        }
+        }}
       />
     </>
   )

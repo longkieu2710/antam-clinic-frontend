@@ -40,7 +40,7 @@ export function LuotPage() {
 
   const filter = { tu: range[0].format('YYYY-MM-DD'), den: range[1].format('YYYY-MM-DD'), loai: 'KHAM', khoa, bs, q }
   const query = useQuery({ queryKey: ['luot', site, filter], queryFn: () => getLuot(site, filter) })
-  const rows = query.data ?? []
+  const rows = (query.data ?? []).filter((r) => !r.maPhieuGoc)
   const tong = rows.reduce((s, r) => s + r.tongTien, 0)
 
   const columns: BaseColumns<Luot> = [
@@ -107,7 +107,13 @@ export function LuotPage() {
           allowClear
           placeholder="Khoa: tất cả"
           value={khoa}
-          onChange={setKhoa}
+          onChange={(v) => {
+            setKhoa(v)
+            if (bs) {
+              const b = cat.bacSi.find((x) => x.maNV === bs)
+              if (b && b.maKhoa !== v) setBs(undefined)
+            }
+          }}
           options={cat.khoa.map((k) => ({ value: k.maKhoa, label: k.tenKhoa }))}
           style={{ width: 220 }}
           aria-label="Khoa"
@@ -118,7 +124,9 @@ export function LuotPage() {
           placeholder="Bác sĩ: tất cả"
           value={bs}
           onChange={setBs}
-          options={cat.bacSi.map((b) => ({ value: b.maNV, label: b.hoTen }))}
+          options={cat.bacSi
+            .filter((b) => !khoa || b.maKhoa === khoa)
+            .map((b) => ({ value: b.maNV, label: b.hoTen }))}
           style={{ width: 220 }}
           aria-label="Bác sĩ"
         />

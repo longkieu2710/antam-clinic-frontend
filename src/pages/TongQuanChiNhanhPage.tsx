@@ -158,7 +158,7 @@ export function TongQuanChiNhanhPage() {
           </BaseCard>
 
           {d && (d.quaHan?.length ?? 0) > 0 && (
-            <BaseCard title="Đợt quá 30 ngày chưa quay lại (BR12)" style={{ marginBottom: 16 }}>
+            <BaseCard title="Đợt quá 30 ngày chưa quay lại" style={{ marginBottom: 16 }}>
               <ul className="list-plain">
                 {(d.quaHan ?? []).map((x) => (
                   <li key={x.maCDDT}>

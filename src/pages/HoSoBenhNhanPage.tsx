@@ -131,6 +131,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
       render: (_, r) => (
         <>
           <BaseTag color={r.loaiLuot === 'KHAM' ? 'blue' : 'purple'}>{r.loaiLuot === 'KHAM' ? 'Khám' : `Chữa lần ${r.lanThu ?? '?'}`}</BaseTag>
+          {r.maPhieuGoc && <BaseTag color="cyan" title={`Khám bổ sung cho phiếu: ${r.maPhieuGoc}`}>Bổ sung</BaseTag>}
           <div>{dateTimeVN(r.thoiGian)}</div>
           <div className="muted">
             <code>{r.maLuot}</code>
@@ -166,7 +167,13 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
     },
     { title: 'Dịch vụ', dataIndex: 'tienDichVu', align: 'right', render: money, width: 120 },
     { title: 'Thuốc', dataIndex: 'tienThuoc', align: 'right', render: money, width: 110 },
-    { title: 'Thiết bị', dataIndex: 'tienThietBi', align: 'right', render: money, width: 110 },
+    {
+      title: 'Thiết bị',
+      dataIndex: 'tienThietBi',
+      align: 'right',
+      render: (v: number, r) => (r.loaiLuot === 'KHAM' ? <span className="muted">—</span> : money(v)),
+      width: 110,
+    },
     { title: 'Tổng', dataIndex: 'tongTien', align: 'right', render: (v: number) => <strong>{money(v)}</strong>, width: 120 },
     ...(chain
       ? []
@@ -263,7 +270,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
                   }
                   description={`Đã chữa ${d.soLanDaChua} / ${d.soLanChuaCanThiet ?? '?'} lần cần thiết · bác sĩ ${d.tenBS ?? d.maBS} · bắt đầu ${dateVN(d.ngayBatDau)}${
                     d.ngayHenTaiKham ? ` · hẹn tái khám ${dateVN(d.ngayHenTaiKham)}` : ''
-                  }${chain ? ` · ${tenCn(d.maCn)}` : ''}${d.quaHan ? ' · quá 30 ngày chưa quay lại (BR12)' : ''}`}
+                  }${chain ? ` · ${tenCn(d.maCn)}` : ''}${d.quaHan ? ' · quá 30 ngày chưa quay lại' : ''}`}
                   action={
                     !chain && (
                       <BaseSpace direction="vertical" size={4}>
@@ -278,7 +285,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
                         </BaseWritable>
                         <BaseDeleteButton
                           title={`Ngừng điều trị đợt "${d.tenBenh}"?`}
-                          description="Bệnh nhân bỏ dở điều trị (BR12) — đợt kết thúc, bác sĩ không được thưởng."
+                          description="Bệnh nhân bỏ dở điều trị — đợt kết thúc, bác sĩ không được thưởng."
                           okText="Ngừng điều trị"
                           onConfirm={() => stop.mutateAsync(d.maCDDT)}
                         >
@@ -293,7 +300,7 @@ export function HoSoBenhNhanPage({ chain = false }: Props) {
             )}
           </BaseCard>
 
-          <BaseCard title="Các đợt điều trị · CHAN_DOAN_DIEU_TRI" style={{ marginBottom: 16 }}>
+          <BaseCard title="Các đợt điều trị" style={{ marginBottom: 16 }}>
             <BaseTable<DotDieuTri> rowKey="maCDDT" unit="đợt" columns={dotColumns} dataSource={data.dotDieuTri ?? []} pagination={false} scroll={{ x: 900 }} />
           </BaseCard>
 

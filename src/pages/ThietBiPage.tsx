@@ -47,7 +47,7 @@ const TINH_TRANG = ['Hoạt động tốt', 'Đang bảo trì', 'Hỏng', 'Ngừ
 const tinhTrangColor = (v: string | null) =>
   v === 'Hoạt động tốt' ? 'green' : v === 'Ngừng hoạt động' ? 'default' : v === 'Hỏng' ? 'red' : 'orange'
 
-/** Thiết bị y tế của chi nhánh đang chọn. Thiết bị đã dùng trong lượt khám/chữa → xoá = chuyển "Ngừng hoạt động" (BR9). */
+/** Thiết bị y tế của chi nhánh đang chọn. Thiết bị đã dùng trong lượt điều trị (SU_DUNG_TB) → xoá = chuyển "Ngừng hoạt động" (BR9). */
 export function ThietBiPage() {
   const { mode, site, branch } = useSite()
   const hq = mode === 'HQ'

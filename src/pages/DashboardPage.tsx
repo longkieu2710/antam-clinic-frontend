@@ -27,7 +27,7 @@ export function DashboardPage() {
     <>
       <PageTitle
         title="Tổng quan hệ thống"
-        description={`Trạng thái kết nối tới ${mode === 'ALL' ? '4 trạm CSDL phân tán' : 'các trạm CSDL bản này dùng'}. Tự làm mới mỗi 15 giây.`}
+        description={`Trạng thái kết nối tới ${query.data && query.data.length > 2 ? '4 trạm CSDL phân tán' : 'trạm CSDL chi nhánh và Trung tâm'}. Tự làm mới mỗi 15 giây.`}
         extra={
           <BaseButton icon={<ReloadIcon />} loading={query.isFetching} onClick={() => query.refetch()}>
             Kiểm tra lại
@@ -39,15 +39,15 @@ export function DashboardPage() {
 
       <BaseRow gutter={[16, 16]}>
         {query.isLoading &&
-          [0, 1, 2, 3].map((i) => (
-            <BaseCol xs={24} md={12} xl={6} key={i}>
+          (mode === 'BRANCH' ? [0, 1] : [0, 1, 2, 3]).map((i) => (
+            <BaseCol xs={24} md={12} xl={mode === 'BRANCH' ? 12 : 6} key={i}>
               <BaseCard>
                 <BaseSkeleton />
               </BaseCard>
             </BaseCol>
           ))}
         {query.data?.map((s) => (
-          <BaseCol xs={24} md={12} xl={6} key={s.site}>
+          <BaseCol xs={24} md={12} xl={query.data && query.data.length <= 2 ? 12 : 6} key={s.site}>
             <SiteCard status={s} />
           </BaseCol>
         ))}

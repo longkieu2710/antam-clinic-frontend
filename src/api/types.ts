@@ -367,6 +367,7 @@ export interface ChiPhi {
 
 export interface LuotHoSo {
   maLuot: string
+  maPhieuGoc?: string | null
   thoiGian: string
   loaiLuot: 'KHAM' | 'CHUA'
   maKhoa: string
@@ -462,6 +463,7 @@ export interface Luot {
   tienThuoc: number
   tienThietBi: number
   tongTien: number
+  maPhieuGoc?: string | null
 }
 
 export interface YTaHoTro {
@@ -484,6 +486,8 @@ export interface LuotChiTiet {
   /** khám: sửa được kết luận / hẹn tái khám — khoá khi có đợt đã khỏi hoặc ngừng điều trị */
   suaDuoc: boolean
   lyDoKhongSua: string | null
+  phieuBoSung?: Luot[]
+  phieuGoc?: Luot | null
 }
 
 export interface ChanDoanInput {
@@ -518,9 +522,11 @@ export interface ChiTietLuotInput {
   yTa: YTaHoTroInput[]
   dichVu: DichVuDungInput[]
   thuoc: ThuocKeInput[]
-  thietBi: ThietBiDungInput[]
+  /** Chỉ sử dụng cho phiếu điều trị (SU_DUNG_TB), phiếu khám không dùng thiết bị */
+  thietBi?: ThietBiDungInput[]
 }
 
+/** Payload tạo lượt khám (PHIEU_KHAM) - chỉ có dịch vụ, kê đơn và chẩn đoán đợt; không có thiết bị */
 export interface LuotKhamRequest extends ChiTietLuotInput {
   maBN: string
   maKhoa: string
@@ -531,6 +537,7 @@ export interface LuotKhamRequest extends ChiTietLuotInput {
   trieuChung: string | null
   ghiChu: string | null
   chanDoan: ChanDoanInput[]
+  maPhieuGoc?: string | null
 }
 
 /** PUT /api/luot-kham/{maLuot} — kết luận và hẹn tái khám nhập khi sửa lượt khám, không nhập lúc tạo */
@@ -543,6 +550,8 @@ export interface SuaLuotKhamRequest {
 
 export interface LuotChuaRequest extends ChiTietLuotInput {
   maCDDT: string
+  maKhoa?: string | null
+  maBS?: string | null
   thoiGian: string
   hinhThuc: string[]
   ghiChu: string | null
@@ -568,6 +577,21 @@ export interface TaoLuot {
   lanThu: number | null
   tongTien: number
   canhBao: string[]
+  maPhieuGoc?: string | null
+}
+
+export interface PhieuKhamGocSummary {
+  maLuot: string
+  thoiGian: string
+  maBS: string
+  tenBS: string | null
+  maKhoa: string
+  tenKhoa: string | null
+  lyDoKham: string | null
+  trieuChung: string | null
+  ketLuanKham: string | null
+  benh?: string | null
+  tongTien: number
 }
 
 // ---- Toàn chuỗi (S0)
@@ -680,4 +704,97 @@ export interface HoaDonDetail {
     donGia: number
     thanhTien: number
   }[]
+}
+
+// ---- MongoDB & Kafka Analytics Types ----
+export interface ApiOverviewStats {
+  status: string
+  kafkaConnected: boolean
+  mongoConnected: boolean
+  totalCalls: number
+  totalErrors: number
+  errorRate: number
+  avgDurationMs: number
+  statusBreakdown: { '2xx': number; '4xx': number; '5xx': number }
+  methodBreakdown: Record<string, number>
+}
+
+export interface ApiLogEntry {
+  _id: string
+  requestId: string
+  timestamp: string
+  site: string
+  siteName: string
+  method: string
+  url: string
+  route: string
+  statusCode: number
+  durationMs: number
+  isError: boolean
+  errorMessage: string | null
+  errorStack: string | null
+  errorCode: string | null
+  clientIp: string
+  userAgent: string
+}
+
+export interface TopSlowApi {
+  route: string
+  method: string
+  count: number
+  avgDurationMs: number
+  maxDurationMs: number
+  minDurationMs: number
+  avgDuration?: number
+  maxDuration?: number
+  minDuration?: number
+}
+
+export interface TopErrorApi {
+  route: string
+  method: string
+  statusCode: number
+  errorMessage: string | null
+  count: number
+  lastOccurred: string
+}
+
+export interface InvoiceMongoOverview {
+  status: string
+  totalInvoices: number
+  tongTien: number
+  giamTru: number
+  phaiTra: number
+  daThanhToan: number
+  conThieu: number
+  tyLeThuHoi: number
+  daThuHetCount: number
+  chuaThuHetCount: number
+  trangThaiBreakdown: Record<string, { count: number; tongTien: number }>
+}
+
+export interface InvoiceBranchStat {
+  site: string
+  siteName: string
+  totalInvoices: number
+  phaiTra: number
+  daThanhToan: number
+  conThieu: number
+  tyLeThu: number
+}
+
+export interface PaymentMethodStat {
+  hinhThuc: string
+  soLuotThanhToan: number
+  tongTienThu: number
+}
+
+export interface TopDebtor {
+  maBN: string
+  tenBN: string
+  soDienThoai: string | null
+  soHoaDonNo: number
+  tongNo: number
+  tongPhaiTra: number
+  tongDaTra: number
 }

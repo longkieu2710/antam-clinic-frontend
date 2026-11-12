@@ -21,7 +21,6 @@ import {
   BaseSelect,
   BaseTable,
   BaseTag,
-  LockIcon,
   useBaseForm,
   useBaseWatch,
   useNotify,
@@ -48,6 +47,8 @@ import type { ChiTietFormValues } from './luot/luotUtils'
 import { useLuotCatalogs } from './luot/useLuotCatalogs'
 
 interface FormValues extends ChiTietFormValues {
+  maKhoa?: string
+  maBS?: string
   thoiGian: Dayjs
   hinhThuc?: string[]
   ghiChu?: string
@@ -70,8 +71,10 @@ export function LuotChuaPage() {
   const [saved, setSaved] = useState<TaoLuot | null>(null)
   const cat = useLuotCatalogs(site)
 
-  const maBN = params.get('maBN') ?? undefined
-  const maCDDT = params.get('maCDDT') ?? undefined
+  const rawBN = params.get('maBN')
+  const maBN = rawBN && rawBN !== 'undefined' && rawBN !== 'null' ? rawBN : undefined
+  const rawCDDT = params.get('maCDDT')
+  const maCDDT = rawCDDT && rawCDDT !== 'undefined' && rawCDDT !== 'null' ? rawCDDT : undefined
   const setQuery = (bn?: string, dot?: string) => {
     const next: Record<string, string> = {}
     if (bn) next.maBN = bn
@@ -94,9 +97,11 @@ export function LuotChuaPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ chạy khi danh sách đợt đổi
   }, [dots.data])
 
-  const reset = () => {
+  const reset = (d?: DotDieuTri) => {
     form.resetFields()
     form.setFieldsValue({
+      maKhoa: d?.maKhoa,
+      maBS: d?.maBS,
       thoiGian: dayjs(),
       hinhThuc: [],
       yTa: [],
@@ -106,7 +111,7 @@ export function LuotChuaPage() {
     })
   }
   useEffect(() => {
-    reset()
+    reset(dot)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- khởi tạo lại khi chọn đợt khác
   }, [dot?.maCDDT, site])
 
@@ -117,7 +122,7 @@ export function LuotChuaPage() {
     onSuccess: (r) => {
       setSaved(r)
       LUOT_QUERY_KEYS.forEach((queryKey) => queryClient.invalidateQueries({ queryKey }))
-      reset()
+      reset(dot)
     },
     onError: (e) => applyFieldErrors(form, e),
   })
@@ -135,6 +140,8 @@ export function LuotChuaPage() {
   const submit = (v: FormValues) =>
     save.mutate({
       maCDDT: dot!.maCDDT,
+      maKhoa: v.maKhoa ?? dot!.maKhoa,
+      maBS: v.maBS ?? dot!.maBS,
       thoiGian: toLocalDateTime(v.thoiGian ?? dayjs()),
       hinhThuc: v.hinhThuc ?? [],
       ghiChu: blankToNull(v.ghiChu),
@@ -153,6 +160,11 @@ export function LuotChuaPage() {
   const lanThu = dot ? dot.soLanDaChua + 1 : 0
   const soYTa = (values.yTa ?? []).length
   const datDuKien = !!dot && lanThu >= (dot.soLanChuaCanThiet ?? 1)
+
+  const selectedKhoa = values.maKhoa ?? dot?.maKhoa
+  const yTaOptions = cat.yTa
+    .filter((y) => !selectedKhoa || y.maKhoa === selectedKhoa)
+    .map((y) => ({ value: y.maNV, label: y.hoTen, extra: y.tenKhoa ?? undefined }))
 
   const dotColumns: BaseColumns<DotDieuTri> = [
     {
@@ -175,7 +187,7 @@ export function LuotChuaPage() {
         <>
           {dateTimeVN(d.luotGanNhat)}
           <div className="muted">hẹn {dateVN(d.ngayHenTaiKham)}</div>
-          {d.quaHan && <BaseTag color="warning">Quá 30 ngày (BR12)</BaseTag>}
+          {d.quaHan && <BaseTag color="warning">Quá 30 ngày</BaseTag>}
         </>
       ),
     },
@@ -188,7 +200,7 @@ export function LuotChuaPage() {
         <span onClick={(e) => e.stopPropagation()}>
           <BaseDeleteButton
             title={`Ngừng điều trị đợt "${d.tenBenh}"?`}
-            description="Bệnh nhân bỏ dở điều trị (BR12) — đợt kết thúc, bác sĩ không được thưởng."
+            description="Bệnh nhân bỏ dở điều trị — đợt kết thúc, bác sĩ không được thưởng."
             okText="Ngừng điều trị"
             onConfirm={() => stop.mutateAsync(d.maCDDT)}
           >
@@ -227,7 +239,7 @@ export function LuotChuaPage() {
               </BaseFormItem>
             </BaseCard>
 
-            <BaseCard title={<>2. Chọn đợt điều trị đang mở <span className="muted">CHAN_DOAN_DIEU_TRI</span></>}>
+            <BaseCard title="2. Chọn đợt điều trị đang mở">
               {!maBN ? (
                 <span className="muted">Chọn bệnh nhân để xem các đợt đang điều trị.</span>
               ) : dots.isSuccess && dotList.length === 0 ? (
@@ -236,7 +248,7 @@ export function LuotChuaPage() {
                   title="Không có đợt đang điều trị tại chi nhánh này"
                   description={
                     <>
-                      Không thể thêm lần chữa vào đợt đã khỏi hoặc đã ngừng (BR3, BR12). Nếu bệnh nhân mắc lại →{' '}
+                      Không thể thêm lần chữa vào đợt đã khỏi hoặc đã ngừng. Nếu bệnh nhân mắc lại →{' '}
                       <Link to={`/luot-kham-moi?maBN=${encodeURIComponent(maBN)}`}>tạo lượt khám mới</Link>.
                     </>
                   }
@@ -262,16 +274,52 @@ export function LuotChuaPage() {
 
             {dot && (
               <>
-                <BaseCard title={<>3. Thông tin lần chữa <span className="muted">LUOT_KHAM_CHUA · LAN_CHUA · LAN_CHUA_HINH_THUC</span></>}>
+                <BaseCard title="3. Thông tin lần chữa">
                   <BaseRow gutter={16}>
                     <BaseCol xs={24} md={12}>
-                      <BaseFormItem label="Bác sĩ thực hiện" extra="BR2: cố định theo bác sĩ đã khám mở đợt">
-                        <BaseInput disabled prefix={<LockIcon />} value={`${dot.tenBS ?? ''} · ${dot.maBS}`} />
+                      <BaseFormItem name="maKhoa" label="Khoa" rules={[{ required: true, message: 'Chọn khoa' }]}>
+                        <BaseSelect
+                          placeholder="Chọn khoa"
+                          options={cat.khoa.map((k) => ({ value: k.maKhoa, label: k.tenKhoa }))}
+                          onChange={(v) => {
+                            const bs = cat.bacSi.find((b) => b.maNV === form.getFieldValue('maBS'))
+                            if (bs && bs.maKhoa !== v) form.setFieldsValue({ maBS: undefined })
+                            const curYTa: string[] = form.getFieldValue('yTa') ?? []
+                            if (curYTa.length > 0) {
+                              const valid = curYTa.filter((id) => cat.yTa.some((y) => y.maNV === id && y.maKhoa === v))
+                              if (valid.length !== curYTa.length) form.setFieldsValue({ yTa: valid })
+                            }
+                          }}
+                          aria-label="Khoa"
+                        />
                       </BaseFormItem>
                     </BaseCol>
                     <BaseCol xs={24} md={12}>
-                      <BaseFormItem label="Khoa">
-                        <BaseInput disabled prefix={<LockIcon />} value={dot.tenKhoa ?? dot.maKhoa} />
+                      <BaseFormItem
+                        name="maBS"
+                        label="Bác sĩ thực hiện"
+                        rules={[{ required: true, message: 'Chọn bác sĩ thực hiện' }]}
+                        extra="Chỉ bác sĩ đang làm việc của chi nhánh này"
+                      >
+                        <BaseSelect
+                          showSearch={{ optionFilterProp: 'label' }}
+                          placeholder="Chọn bác sĩ"
+                          options={cat.bacSi
+                            .filter((b) => !values.maKhoa || b.maKhoa === values.maKhoa)
+                            .map((b) => ({ value: b.maNV, label: `${b.hoTen} · ${b.tenKhoa ?? b.maKhoa}` }))}
+                          onChange={(v) => {
+                            const bs = cat.bacSi.find((b) => b.maNV === v)
+                            if (bs) {
+                              form.setFieldsValue({ maKhoa: bs.maKhoa })
+                              const curYTa: string[] = form.getFieldValue('yTa') ?? []
+                              if (curYTa.length > 0) {
+                                const valid = curYTa.filter((id) => cat.yTa.some((y) => y.maNV === id && y.maKhoa === bs.maKhoa))
+                                if (valid.length !== curYTa.length) form.setFieldsValue({ yTa: valid })
+                              }
+                            }
+                          }}
+                          aria-label="Bác sĩ thực hiện"
+                        />
                       </BaseFormItem>
                     </BaseCol>
                     <BaseCol xs={24} md={12}>
@@ -284,14 +332,18 @@ export function LuotChuaPage() {
                       </BaseFormItem>
                     </BaseCol>
                     <BaseCol xs={24} md={12}>
-                      <BaseFormItem label="Mã lượt (BR5)" extra={`Lần chữa thứ ${lanThu} của đợt (tự sinh)`}>
-                        <BaseInput disabled prefix={<LockIcon />} value={maLuotPreview('C', dot.maKhoa, dot.maBS, values.thoiGian ?? dayjs())} style={{ fontFamily: 'monospace' }} />
+                      <BaseFormItem label="Mã lượt" extra={`Lần chữa thứ ${lanThu} của đợt (tự sinh)`}>
+                        <BaseInput
+                          disabled
+                          value={maLuotPreview('C', values.maKhoa ?? dot.maKhoa, values.maBS ?? dot.maBS, values.thoiGian ?? dayjs())}
+                          style={{ fontFamily: 'monospace' }}
+                        />
                       </BaseFormItem>
                     </BaseCol>
                     <BaseCol xs={24}>
                       <BaseFormItem
                         name="hinhThuc"
-                        label={<>Hình thức chữa <span className="muted">&nbsp;LAN_CHUA_HINH_THUC (đa trị)</span></>}
+                        label="Hình thức chữa"
                         rules={[{ required: true, type: 'array', min: 1, message: 'Chọn ít nhất một hình thức chữa' }]}
                       >
                         <BaseCheckableTags options={HINH_THUC.map((h) => ({ value: h, label: h }))} />
@@ -305,33 +357,39 @@ export function LuotChuaPage() {
                         ? `Lần chữa này đạt số lần chữa dự kiến (${dot.soLanChuaCanThiet ?? 1} lần)`
                         : 'Kết quả lần chữa ghi sau khi chữa'
                     }
-                    description="Tình trạng sau chữa, kết luận, số lần chữa cần thiết và hẹn tái khám tiếp: sau khi lưu, mở chi tiết lượt → Sửa. Chọn “Khỏi” ở đó để kết thúc đợt (BR10)."
+                    description="Tình trạng sau chữa, kết luận, số lần chữa cần thiết và hẹn tái khám tiếp: sau khi lưu, mở chi tiết lượt → Sửa. Chọn “Khỏi” ở đó để kết thúc đợt."
                   />
                   {dot.quaHan && (
                     <BaseAlert
                       type="warning"
                       style={{ marginTop: 8 }}
-                      title="Bệnh nhân quá 30 ngày chưa quay lại (BR12)"
+                      title="Bệnh nhân quá 30 ngày chưa quay lại"
                       description="Theo quy tắc, đợt này nên chuyển “Ngừng điều trị”. Vẫn có thể ghi lần chữa nếu bệnh nhân tiếp tục điều trị."
                     />
                   )}
                 </BaseCard>
 
-                <BaseCard title={<>4. Y tá hỗ trợ <span className="muted">HO_TRO</span></>}>
-                  <BaseFormItem name="yTa" style={{ marginBottom: 8 }}>
-                    <BaseCheckableTags options={cat.yTa.map((y) => ({ value: y.maNV, label: y.hoTen, extra: y.tenKhoa ?? undefined }))} />
-                  </BaseFormItem>
+                <BaseCard title="4. Y tá hỗ trợ">
+                  {yTaOptions.length === 0 ? (
+                    <div className="muted" style={{ padding: '8px 0' }}>
+                      {selectedKhoa ? 'Khoa này hiện chưa có y tá đang làm việc.' : 'Vui lòng chọn khoa để xem danh sách y tá.'}
+                    </div>
+                  ) : (
+                    <BaseFormItem name="yTa" style={{ marginBottom: 8 }}>
+                      <BaseCheckableTags options={yTaOptions} />
+                    </BaseFormItem>
+                  )}
                   <div className="muted">
                     {soYTa > 0
-                      ? `${soYTa} y tá × ${money(THUONG_HO_TRO)} = ${money(soYTa * THUONG_HO_TRO)} thưởng (F3).`
-                      : 'Chọn y tá tiêm, cấp thuốc, trị liệu… — mỗi y tá là 1 dòng HO_TRO.'}
+                      ? `${soYTa} y tá × ${money(THUONG_HO_TRO)} = ${money(soYTa * THUONG_HO_TRO)} thưởng.`
+                      : 'Chọn y tá tiêm, cấp thuốc, trị liệu… hỗ trợ bác sĩ trong ca điều trị.'}
                   </div>
                 </BaseCard>
 
                 <BaseCard title="5. Dịch vụ · Thuốc · Thiết bị">
                   <BaseAlert
                     type="info"
-                    title="Miễn phí khám (BR11)"
+                    title="Miễn phí khám"
                     description="Tái khám trong đợt không tính dịch vụ “Khám bệnh”; chỉ tính thủ thuật, nhân công, thuốc, xét nghiệm / chụp chiếu, thiết bị."
                     style={{ marginBottom: 12 }}
                   />
@@ -363,7 +421,7 @@ export function LuotChuaPage() {
             tien={tien}
             actions={
               <>
-                <BaseButton onClick={reset} disabled={!dot}>
+                <BaseButton onClick={() => reset(dot)} disabled={!dot}>
                   Làm lại
                 </BaseButton>
                 <BaseButton type="primary" htmlType="submit" loading={save.isPending} disabled={!dot}>

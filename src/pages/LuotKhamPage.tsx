@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { createLuotKham, getBenhNhan, getDotDangDieuTri } from '../api/endpoints'
+import { createLuotKham, getBenhNhan, getDotDangDieuTri, getPhieuKhamGoc } from '../api/endpoints'
 import type { ChanDoanInput, LuotKhamRequest, TaoLuot } from '../api/types'
 import {
   AddIcon,
@@ -56,14 +56,16 @@ interface FormValues extends ChiTietFormValues {
   lyDoKham?: string
   trieuChung?: string
   ghiChu?: string
+  loaiKham?: 'BAN_DAU' | 'BO_SUNG'
+  maPhieuGoc?: string
   chanDoan?: { maBenh?: string; mucDo: ChanDoanInput['mucDo']; soLanChuaCanThiet: number }[]
 }
 
 
 
 /**
- * Tạo lượt khám: LUOT_KHAM_CHUA (KHAM) + LAN_KHAM + mỗi chẩn đoán mở một đợt CHAN_DOAN_DIEU_TRI + y tá hỗ trợ +
- * dịch vụ, thuốc, thiết bị — backend lưu cả form trong một transaction tại chi nhánh.
+ * Tạo lượt khám: PHIEU_KHAM + mỗi chẩn đoán mở một DOT_DIEU_TRI + y tá hỗ trợ +
+ * dịch vụ khám/CLS (DV_KHAM), kê đơn thuốc (KE_DON). Theo spec phiếu khám không sử dụng thiết bị (SU_DUNG_TB chỉ dùng cho PHIEU_DIEU_TRI).
  */
 export function LuotKhamPage() {
   const { site, branch } = useSite()
@@ -74,6 +76,7 @@ export function LuotKhamPage() {
   const cat = useLuotCatalogs(site)
 
   const maBNParam = params.get('maBN') ?? undefined
+  const maPhieuGocParam = params.get('maPhieuGoc') ?? undefined
   const values = (useBaseWatch([], form) ?? {}) as Partial<FormValues>
   const maBN = values.maBN
   const maKhoa = values.maKhoa
@@ -86,27 +89,40 @@ export function LuotKhamPage() {
     queryFn: () => getDotDangDieuTri(site, maBN!),
     enabled: !!localBN,
   })
+  const phieuGocQuery = useQuery({
+    queryKey: ['phieu-kham-goc', site, maBN],
+    queryFn: () => getPhieuKhamGoc(site, maBN!),
+    enabled: !!maBN,
+  })
+
+  useEffect(() => {
+    if (values.loaiKham === 'BO_SUNG' && !form.getFieldValue('maPhieuGoc') && phieuGocQuery.data?.length === 1) {
+      form.setFieldsValue({ maPhieuGoc: phieuGocQuery.data[0].maLuot })
+    }
+  }, [values.loaiKham, phieuGocQuery.data, form])
 
   const khamDV = cat.catalogs.dichVu.find((d) => d.loaiDV === LOAI_KHAM_BENH)
 
-  const reset = (bn?: string) => {
+  const reset = (bn?: string, pg?: string) => {
+    const isBoSung = !!(pg || maPhieuGocParam)
     form.resetFields()
     form.setFieldsValue({
       maBN: bn,
       thoiGian: dayjs(),
+      loaiKham: isBoSung ? 'BO_SUNG' : 'BAN_DAU',
+      maPhieuGoc: pg || maPhieuGocParam,
       chanDoan: [],
       yTa: [],
       dichVu: khamDV ? [{ maDV: khamDV.maDV, soLuong: 1 }] : [],
       thuoc: [],
-      thietBi: [],
     })
   }
 
   // Khởi tạo form khi danh mục dịch vụ đã tải (tự thêm dịch vụ "Khám bệnh") hoặc khi đổi bệnh nhân trên URL
   useEffect(() => {
-    if (!cat.loading) reset(maBNParam)
+    if (!cat.loading) reset(maBNParam, maPhieuGocParam)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- chỉ khởi tạo lại khi đổi chi nhánh / bệnh nhân trên URL
-  }, [cat.loading, site, maBNParam])
+  }, [cat.loading, site, maBNParam, maPhieuGocParam])
 
   const save = useMutation({
     mutationFn: (body: LuotKhamRequest) => createLuotKham(site, body),
@@ -127,8 +143,9 @@ export function LuotKhamPage() {
       lyDoKham: blankToNull(v.lyDoKham),
       trieuChung: blankToNull(v.trieuChung),
       ghiChu: blankToNull(v.ghiChu),
+      maPhieuGoc: v.loaiKham === 'BO_SUNG' ? blankToNull(v.maPhieuGoc) : null,
       chanDoan: (v.chanDoan ?? []).filter((c) => c?.maBenh).map((c) => ({ ...c, maBenh: c.maBenh! })),
-      ...toChiTietInput(v),
+      ...toChiTietInput(v, { excludeThietBi: true }),
     })
 
   const bnOptions = [
@@ -142,12 +159,14 @@ export function LuotKhamPage() {
     const open = dangMo.find((d) => d.maBenh === b.maBenh)
     return {
       value: b.maBenh,
-      label: `${b.tenBenh}${b.maICD10 ? ` · ${b.maICD10}` : ''}${open ? ' — đang điều trị (BR4)' : ''}`,
+      label: `${b.tenBenh}${b.maICD10 ? ` · ${b.maICD10}` : ''}${open ? ' — đang điều trị' : ''}`,
       disabled: !!open,
     }
   })
-  const yTaOptions = cat.yTa.map((y) => ({ value: y.maNV, label: y.hoTen, extra: y.tenKhoa ?? undefined }))
-  const tien = tinhTien(values, cat.catalogs)
+  const yTaOptions = cat.yTa
+    .filter((y) => !maKhoa || y.maKhoa === maKhoa)
+    .map((y) => ({ value: y.maNV, label: y.hoTen, extra: y.tenKhoa ?? undefined }))
+  const tien = tinhTien(values, cat.catalogs, { excludeThietBi: true })
   const soChanDoan = (values.chanDoan ?? []).filter((c) => c?.maBenh).length
   const soYTa = (values.yTa ?? []).length
   const bn = localBN
@@ -155,18 +174,22 @@ export function LuotKhamPage() {
   return (
     <>
       <PageTitle
-        title="Tạo lượt khám"
-        description={`Mỗi bệnh được chẩn đoán mở một đợt điều trị riêng. Cả form lưu trong một transaction tại ${branch?.tenCn ?? site}.`}
+        title={values.loaiKham === 'BO_SUNG' ? 'Tạo lượt khám bổ sung' : 'Tạo lượt khám'}
+        description={
+          values.loaiKham === 'BO_SUNG'
+            ? `Khám bổ sung hội chẩn hoặc đọc kết quả cận lâm sàng theo phiếu gốc tại ${branch?.tenCn ?? site}.`
+            : `Mỗi bệnh được chẩn đoán mở một đợt điều trị riêng tại ${branch?.tenCn ?? site}.`
+        }
         extra={<Link to="/tiep-don">Tra cứu ở màn Tiếp đón →</Link>}
       />
 
       {save.error && <BaseErrorAlert title="Chưa lưu được lượt khám" error={save.error} style={{ marginBottom: 16 }} />}
       {cat.error && <BaseErrorAlert title="Không tải được danh mục của chi nhánh" error={cat.error} style={{ marginBottom: 16 }} />}
 
-      <BaseForm<FormValues> form={form} initialValues={{ thoiGian: dayjs() }} onFinish={submit} submitOnEnter={false}>
+      <BaseForm<FormValues> form={form} initialValues={{ thoiGian: dayjs(), loaiKham: 'BAN_DAU' }} onFinish={submit} submitOnEnter={false}>
         <div className="luot-layout">
           <div>
-            <BaseCard title={<>1. Bệnh nhân <span className="muted">LAN_KHAM.MaBN</span></>}>
+            <BaseCard title="1. Bệnh nhân & Hình thức khám">
               <BaseFormItem name="maBN" label="Bệnh nhân" rules={[{ required: true, message: 'Chọn bệnh nhân' }]}>
                 <BaseSelect
                   showSearch={{ optionFilterProp: 'label' }}
@@ -176,6 +199,66 @@ export function LuotKhamPage() {
                   aria-label="Bệnh nhân"
                 />
               </BaseFormItem>
+
+              <BaseRow gutter={16}>
+                <BaseCol xs={24} md={12}>
+                  <BaseFormItem name="loaiKham" label="Hình thức khám">
+                    <BaseSelect
+                      options={[
+                        { value: 'BAN_DAU', label: 'Khám ban đầu (Phiếu khám mới)' },
+                        { value: 'BO_SUNG', label: 'Khám bổ sung (Hội chẩn / Đánh giá CLS)' },
+                      ]}
+                      onChange={(v) => {
+                        if (v === 'BAN_DAU') {
+                          form.setFieldsValue({ maPhieuGoc: undefined })
+                        } else if (v === 'BO_SUNG' && phieuGocQuery.data?.length === 1) {
+                          form.setFieldsValue({ maPhieuGoc: phieuGocQuery.data[0].maLuot })
+                        }
+                      }}
+                    />
+                  </BaseFormItem>
+                </BaseCol>
+
+                {values.loaiKham === 'BO_SUNG' && (
+                  <BaseCol xs={24} md={12}>
+                    <BaseFormItem
+                      name="maPhieuGoc"
+                      label="Phiếu khám gốc (chỉ chọn lần khám đầu tiên)"
+                      rules={[{ required: true, message: 'Chọn lần khám ban đầu để liên kết' }]}
+                    >
+                      <BaseSelect
+                        showSearch={{ optionFilterProp: 'label' }}
+                        placeholder="Chọn lần khám đầu tiên…"
+                        loading={phieuGocQuery.isLoading}
+                        options={(phieuGocQuery.data ?? []).map((p) => ({
+                          value: p.maLuot,
+                          label: `${p.maLuot} — Khám ban đầu ngày ${dateVN(p.thoiGian)} (${p.tenKhoa ?? p.maKhoa} · BS ${p.tenBS ?? p.maBS}${p.benh ? ` · ${p.benh}` : ''})`,
+                        }))}
+                      />
+                    </BaseFormItem>
+                  </BaseCol>
+                )}
+              </BaseRow>
+
+              {values.loaiKham === 'BO_SUNG' && phieuGocQuery.isSuccess && (phieuGocQuery.data ?? []).length === 0 && (
+                <BaseAlert
+                  type="warning"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  title="Bệnh nhân chưa có lần khám ban đầu nào tại chi nhánh"
+                  description="Khám bổ sung chỉ áp dụng khi bệnh nhân đã có một lần khám ban đầu. Vui lòng chuyển hình thức khám sang 'Khám ban đầu'."
+                />
+              )}
+
+              {values.loaiKham === 'BO_SUNG' && (
+                <BaseAlert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  title="Quy định nghiệp vụ Khám bổ sung"
+                  description="Phiếu khám bổ sung được tạo khi cần hội chẩn sang khoa khác hoặc quay lại đọc kết quả xét nghiệm/chẩn đoán hình ảnh. Phiếu bổ sung là độc lập, có thu phí khám và có hóa đơn riêng."
+                />
+              )}
               {bn && (
                 <BaseDescriptions
                   size="small"
@@ -208,7 +291,7 @@ export function LuotKhamPage() {
                   description={
                     <>
                       {dangMo.map((d) => `${d.tenBenh} (đã chữa ${d.soLanDaChua}/${d.soLanChuaCanThiet ?? '?'})`).join(', ')} — không chẩn đoán lại các bệnh
-                      này (BR4); tái khám cho đợt đang mở thì dùng{' '}
+                      này; tái khám cho đợt đang mở thì dùng{' '}
                       <Link to={`/luot-chua-moi?maBN=${encodeURIComponent(maBN!)}`}>Tạo lượt chữa</Link>.
                     </>
                   }
@@ -216,7 +299,7 @@ export function LuotKhamPage() {
               )}
             </BaseCard>
 
-            <BaseCard title={<>2. Thông tin khám <span className="muted">LUOT_KHAM_CHUA · LAN_KHAM</span></>}>
+            <BaseCard title="2. Thông tin khám">
               <BaseRow gutter={16}>
                 <BaseCol xs={24} md={12}>
                   <BaseFormItem name="maKhoa" label="Khoa" rules={[{ required: true, message: 'Chọn khoa' }]}>
@@ -226,6 +309,11 @@ export function LuotKhamPage() {
                       onChange={(v) => {
                         const bs = cat.bacSi.find((b) => b.maNV === form.getFieldValue('maBS'))
                         if (bs && bs.maKhoa !== v) form.setFieldsValue({ maBS: undefined })
+                        const curYTa: string[] = form.getFieldValue('yTa') ?? []
+                        if (curYTa.length > 0) {
+                          const valid = curYTa.filter((id) => cat.yTa.some((y) => y.maNV === id && y.maKhoa === v))
+                          if (valid.length !== curYTa.length) form.setFieldsValue({ yTa: valid })
+                        }
                       }}
                       aria-label="Khoa"
                     />
@@ -236,7 +324,7 @@ export function LuotKhamPage() {
                     name="maBS"
                     label="Bác sĩ khám"
                     rules={[{ required: true, message: 'Chọn bác sĩ khám' }]}
-                    extra="Chỉ bác sĩ đang làm việc của chi nhánh này (BR6)"
+                    extra="Chỉ bác sĩ đang làm việc của chi nhánh này"
                   >
                     <BaseSelect
                       showSearch={{ optionFilterProp: 'label' }}
@@ -244,7 +332,14 @@ export function LuotKhamPage() {
                       options={bacSiOptions}
                       onChange={(v) => {
                         const bs = cat.bacSi.find((b) => b.maNV === v)
-                        if (bs) form.setFieldsValue({ maKhoa: bs.maKhoa })
+                        if (bs) {
+                          form.setFieldsValue({ maKhoa: bs.maKhoa })
+                          const curYTa: string[] = form.getFieldValue('yTa') ?? []
+                          if (curYTa.length > 0) {
+                            const valid = curYTa.filter((id) => cat.yTa.some((y) => y.maNV === id && y.maKhoa === bs.maKhoa))
+                            if (valid.length !== curYTa.length) form.setFieldsValue({ yTa: valid })
+                          }
+                        }
                       }}
                       aria-label="Bác sĩ khám"
                     />
@@ -256,7 +351,7 @@ export function LuotKhamPage() {
                   </BaseFormItem>
                 </BaseCol>
                 <BaseCol xs={24} md={12}>
-                  <BaseFormItem label="Mã lượt (BR5)" extra="K-MaKhoa-MaBS-yyMMdd-NNN — số thứ tự sinh khi lưu">
+                  <BaseFormItem label="Mã lượt" extra="Số thứ tự được sinh tự động khi lưu">
                     <BaseInput readOnly value={maLuotPreview('K', maKhoa, maBS, values.thoiGian)} style={{ fontFamily: 'monospace' }} />
                   </BaseFormItem>
                 </BaseCol>
@@ -273,7 +368,7 @@ export function LuotKhamPage() {
               </BaseRow>
             </BaseCard>
 
-            <BaseCard title={<>3. Chẩn đoán → mở đợt điều trị <span className="muted">CHAN_DOAN_DIEU_TRI</span></>}>
+            <BaseCard title="3. Chẩn đoán & đợt điều trị">
               <BaseFormList name="chanDoan">
                 {(fields, { add, remove }) => (
                   <>
@@ -281,7 +376,7 @@ export function LuotKhamPage() {
                       <BaseAlert
                         type="info"
                         title="Chưa có chẩn đoán"
-                        description="Vẫn lưu được lượt khám không có chẩn đoán (không phát hiện bệnh / chờ kết quả) — khi đó không mở đợt điều trị (BR13)."
+                        description="Vẫn lưu được lượt khám không có chẩn đoán (không phát hiện bệnh / chờ kết quả) — khi đó không mở đợt điều trị."
                         style={{ marginBottom: 12 }}
                       />
                     ) : (
@@ -296,7 +391,7 @@ export function LuotKhamPage() {
                       <div className="item-row chan-doan" key={field.key}>
                         <BaseFormItem
                           name={[field.name, 'maBenh']}
-                          rules={[{ required: true, message: 'Chọn bệnh' }, khongTrung('chanDoan', 'maBenh', 'Bệnh (BR1)')]}
+                          rules={[{ required: true, message: 'Chọn bệnh' }, khongTrung('chanDoan', 'maBenh', 'Bệnh')]}
                         >
                           <BaseSelect showSearch={{ optionFilterProp: 'label' }} placeholder="Chọn bệnh" options={benhOptions} aria-label="Bệnh" />
                         </BaseFormItem>
@@ -320,19 +415,25 @@ export function LuotKhamPage() {
               </BaseFormList>
             </BaseCard>
 
-            <BaseCard title={<>4. Y tá hỗ trợ <span className="muted">HO_TRO</span></>}>
-              <BaseFormItem name="yTa" style={{ marginBottom: 8 }}>
-                <BaseCheckableTags options={yTaOptions} />
-              </BaseFormItem>
+            <BaseCard title="4. Y tá hỗ trợ">
+              {yTaOptions.length === 0 ? (
+                <div className="muted" style={{ padding: '8px 0' }}>
+                  {maKhoa ? 'Khoa này hiện chưa có y tá đang làm việc.' : 'Vui lòng chọn khoa để xem danh sách y tá.'}
+                </div>
+              ) : (
+                <BaseFormItem name="yTa" style={{ marginBottom: 8 }}>
+                  <BaseCheckableTags options={yTaOptions} />
+                </BaseFormItem>
+              )}
               <div className="muted">
                 {soYTa > 0
-                  ? `${soYTa} y tá × ${money(THUONG_HO_TRO)} = ${money(soYTa * THUONG_HO_TRO)} thưởng, cộng vào lương tháng (F3).`
-                  : 'Chọn y tá tiếp đón / hỗ trợ — mỗi y tá là 1 dòng HO_TRO. Chỉ hiện y tá đang làm việc của chi nhánh (BR6).'}
+                  ? `${soYTa} y tá × ${money(THUONG_HO_TRO)} = ${money(soYTa * THUONG_HO_TRO)} thưởng, cộng vào lương tháng.`
+                  : 'Chọn y tá tiếp đón / hỗ trợ ca khám. Chỉ hiện y tá đang làm việc thuộc khoa.'}
               </div>
             </BaseCard>
 
-            <BaseCard title="5. Dịch vụ · Thuốc · Thiết bị">
-              <LuotItemsEditor form={form} catalogs={cat.catalogs} />
+            <BaseCard title="5. Dịch vụ · Thuốc">
+              <LuotItemsEditor form={form} catalogs={cat.catalogs} hideThietBi />
             </BaseCard>
           </div>
 
@@ -344,6 +445,7 @@ export function LuotKhamPage() {
               ['Y tá hỗ trợ', soYTa],
             ]}
             tien={tien}
+            hideThietBi
             actions={
               <>
                 <BaseButton onClick={() => reset(maBN)}>Làm lại</BaseButton>

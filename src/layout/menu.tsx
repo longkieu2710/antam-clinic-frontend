@@ -1,6 +1,7 @@
 import {
   AccountBookIcon,
   ApartmentIcon,
+  ApiIcon,
   BankIcon,
   BarChartIcon,
   DashboardIcon,
@@ -101,6 +102,7 @@ export const MENU: MenuGroup[] = [
       { path: '/tc-doanh-thu', label: 'Doanh thu toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
       { path: '/tc-ho-so', label: 'Hồ sơ BN toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
       { path: '/tc-thong-ke-benh', label: 'Thống kê bệnh toàn chuỗi', icon: <GlobalIcon />, hub: true, done: true },
+      { path: '/thong-ke-analytics', label: 'Thống kê Mongo & Kafka', icon: <ApiIcon />, hub: true, done: true },
     ],
   },
 ]
